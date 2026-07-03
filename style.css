@@ -17,7 +17,8 @@
   --tank-bg: #e2eaf4;
   --heal-bg: #e5eedb;
   --dps-bg:  #f3e0d8;
-  --hand: "Hannotate SC", "HanziPen SC", "Wawati SC", "Kaiti SC", "Palatino", serif;
+  /* 自带霞鹜文楷屏幕版(fonts/,按 unicode-range 分块按需加载),各平台字体统一;后面是加载完成前的过渡 */
+  --hand: "LXGW WenKai Screen", "Hannotate SC", "HanziPen SC", "Wawati SC", "Kaiti SC", "Palatino", serif;
   /* 两种歪法轮着用,免得每个框歪得一样 */
   --wobble-a: 255px 15px 225px 15px / 15px 225px 15px 255px;
   --wobble-b: 15px 225px 15px 255px / 255px 15px 225px 15px;
