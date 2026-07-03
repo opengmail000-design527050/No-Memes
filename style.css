@@ -381,7 +381,7 @@ dialog input {
   outline: none;
 }
 dialog input:focus { border-color: var(--accent-soft); }
-dialog .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-start; gap: 10px; margin-top: 18px; }
 
 @media (max-width: 560px) {
   .brandTop { gap: 10px; }

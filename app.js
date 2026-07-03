@@ -83,7 +83,10 @@ function saveCache() {
     keys.sort((a, b) => cache.scans[a].ts - cache.scans[b].ts)
       .slice(0, keys.length - 2000).forEach(k => delete cache.scans[k]);
   }
-  try { LS.set("fpw_cache", cache); } catch { cache.scans = {}; try { LS.set("fpw_cache", cache); } catch {} }
+  try { LS.set("fpw_cache", cache); } catch {
+    cache.scans = {}; cache.reports = {};   // reports 才是大头（单角色可上百 KB）
+    try { LS.set("fpw_cache", cache); } catch {}
+  }
 }
 
 /* ============ FFLogs 客户端 ============ */
@@ -116,7 +119,8 @@ async function gql(query, variables) {
   if (r.status === 429) throw new FFLogsError("FFLogs 限流（本小时点数用完），稍后再试");
   if (!r.ok) throw new FFLogsError(`FFLogs 请求失败（HTTP ${r.status}）`);
   const data = await r.json();
-  if (data.errors) throw new FFLogsError("GraphQL: " + data.errors.map(e => e.message).join("; "));
+  // 批量别名查询（31 服探测等）里个别字段出错（如隐藏角色）不拖垮整次请求：有部分数据就用部分数据
+  if (data.errors && !data.data) throw new FFLogsError("GraphQL: " + data.errors.map(e => e.message).join("; "));
   return data.data || {};
 }
 
@@ -668,7 +672,7 @@ $("#settings").addEventListener("close", () => {
 $("#settingsBtn").onclick = openSettings;
 $("#go").onclick = () => { currentChar = null; runQuery(); };
 $("#q").addEventListener("input", onInput);
-$("#q").addEventListener("keydown", e => { if (e.key === "Enter") { currentChar = null; runQuery(); } });
+$("#q").addEventListener("keydown", e => { if (e.isComposing) return; if (e.key === "Enter") { currentChar = null; runQuery(); } });
 $("#q").addEventListener("blur", () => setTimeout(() => $("#sugg").classList.add("hidden"), 150));
 renderChips();
 if (!config.clientId) openSettings();

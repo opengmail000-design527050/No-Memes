@@ -52,8 +52,9 @@
     <label>Client Secret<input id="cfgSecret" type="password" autocomplete="off"></label>
     <label>FFLogs 站点<input id="cfgBase" value="https://cn.fflogs.com" spellcheck="false"></label>
     <div class="row">
-      <button value="cancel" class="ghost">取消</button>
+      <!-- 保存放 DOM 第一个：form method=dialog 里按回车触发的是第一个提交按钮；视觉顺序由 CSS row-reverse 保持 -->
       <button value="save" id="cfgSave">保存</button>
+      <button value="cancel" class="ghost">取消</button>
     </div>
   </form>
 </dialog>
