@@ -499,9 +499,12 @@ function progressText(pull) {
 
 async function updatePoints() {
   try {
-    const d = await gql("{rateLimitData{ pointsSpentThisHour limitPerHour }}");
+    const d = await gql("{rateLimitData{ pointsSpentThisHour limitPerHour pointsResetIn }}");
     const r = d.rateLimitData;
-    if (r) $("#points").textContent = `本小时已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点`;
+    if (!r) return;
+    const mins = Math.ceil((r.pointsResetIn || 0) / 60);
+    const when = mins > 0 ? `，${mins} 分钟后刷新` : "";
+    $("#points").textContent = `API 额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`;
   } catch { /* 点数显示是装饰，失败不打扰 */ }
 }
 

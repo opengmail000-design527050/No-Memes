@@ -384,10 +384,10 @@ dialog input {
 dialog input:focus { border-color: var(--accent-soft); }
 dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-start; gap: 10px; margin-top: 18px; }
 
-/* 大屏整页等比放大(设计基准≈笔记本 1440 宽);zoom 现代浏览器全支持 */
-@media (min-width: 1680px) { body { zoom: 1.2; } }
-@media (min-width: 2200px) { body { zoom: 1.45; } }
-@media (min-width: 3200px) { body { zoom: 1.9; } }
+/* 大屏整页等比放大(设计基准≈笔记本 1440 宽);zoom 会放大 100vh,故 min-height 同步除回去,免得整页超一屏要下拉 */
+@media (min-width: 1680px) { body { zoom: 1.2;  min-height: calc(100vh / 1.2); } }
+@media (min-width: 2200px) { body { zoom: 1.45; min-height: calc(100vh / 1.45); } }
+@media (min-width: 3200px) { body { zoom: 1.9;  min-height: calc(100vh / 1.9); } }
 
 @media (max-width: 560px) {
   .brandTop { gap: 10px; }
