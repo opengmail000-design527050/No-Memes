@@ -1,4 +1,4 @@
-/* 开荒进度 web 版 —— progress_query.py 的浏览器移植。
+/* No进度欺诈 web 版 —— progress_query.py 的浏览器移植。
  * 纯静态、用户自带 FFLogs client 凭据（localStorage），查询直连 cn.fflogs.com（CORS 已验证）。 */
 "use strict";
 
