@@ -1,5 +1,8 @@
 /* No进度欺诈 web 版 —— progress_query.py 的浏览器移植。
- * 纯静态、用户自带 FFLogs client 凭据（localStorage），查询直连 cn.fflogs.com（CORS 已验证）。 */
+ * 纯静态、查询直连 cn.fflogs.com（CORS 已验证）。鉴权双模式：
+ *   A. FFLogs 账号登录（OAuth 授权码 + PKCE，公共客户端无 secret）→ /api/v2/user，点数各算各的
+ *   B. 用户自带 client 凭据（高级设置，localStorage）→ /api/v2/client
+ * 优先 A，A 的 token 失效且存有 B 凭据时自动降级重试一次。 */
 "use strict";
 
 /* ============ 常量（来自 fflogs_query.py） ============ */
@@ -92,9 +95,102 @@ function saveCache() {
 /* ============ FFLogs 客户端 ============ */
 class FFLogsError extends Error {}
 
-async function ensureToken() {
+// 站长在 cn.fflogs.com/api/clients 创建 Public Client（勾 Public、无 secret，
+// Redirect URL 填部署地址如 https://no-memes.pages.dev/）后，把 Client ID 填到这里。
+// 留空 = 登录功能不启用，只剩高级（自带凭据）模式。
+const OAUTH_CLIENT_ID = "a22c87a7-8f6f-4277-9707-7a277e56b946";
+const REDIRECT_URI = location.origin + location.pathname.replace(/index\.html$/, "");
+
+let userAuth = LS.get("fpw_user", null);   // { token, refresh, exp, base, name }
+
+function saveUser(u) {
+  userAuth = u;
+  if (u) LS.set("fpw_user", u); else localStorage.removeItem("fpw_user");
+  renderAuthUI();
+}
+
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const randTok = () => b64url(crypto.getRandomValues(new Uint8Array(32)).buffer);
+
+async function oauthToken(params) {
+  const r = await fetch(config.base + "/oauth/token", {
+    method: "POST",
+    body: new URLSearchParams({ client_id: OAUTH_CLIENT_ID, ...params }),
+  });
+  if (!r.ok) throw new FFLogsError(`FFLogs 授权失败（HTTP ${r.status}）`);
+  return r.json();
+}
+
+async function login() {
+  if (!crypto.subtle) { showMsg("登录需要 https 或 localhost 环境。", true); $("#settings").close(); return; }
+  const verifier = randTok(), state = randTok();
+  sessionStorage.setItem("fpw_pkce", JSON.stringify({ verifier, state }));
+  const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  location.href = config.base + "/oauth/authorize?" + new URLSearchParams({
+    client_id: OAUTH_CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: "code",
+    code_challenge: challenge, code_challenge_method: "S256", state,
+  });
+}
+
+// 授权回跳：换 token → 抹掉地址栏里的 code → 拉用户名/角色
+async function handleOAuthCallback() {
+  const q = new URLSearchParams(location.search);
+  if (!q.get("code") && !q.get("error")) return;
+  window.history.replaceState(null, "", location.pathname);   // history 变量被本文件遮蔽，须走 window
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem("fpw_pkce") || "null"); } catch {}
+  sessionStorage.removeItem("fpw_pkce");
+  if (q.get("error")) { showMsg(`FFLogs 授权未完成（${q.get("error")}）。`, true); return; }
+  if (!saved || saved.state !== q.get("state")) { showMsg("登录校验失败（state 不匹配），请重新登录。", true); return; }
+  try {
+    const p = await oauthToken({
+      grant_type: "authorization_code", redirect_uri: REDIRECT_URI,
+      code: q.get("code"), code_verifier: saved.verifier,
+    });
+    saveUser({ token: p.access_token, refresh: p.refresh_token || null, exp: Date.now() + (p.expires_in || 3600) * 1000, base: config.base, name: null });
+    await fetchUserInfo();
+  } catch (e) {
+    showMsg("FFLogs 登录失败：" + e.message, true);
+  }
+}
+
+// 用户名 + 名下认领的角色（角色喂进搜索历史，输入框一点就有）；schema 不支持 characters 时退回只拿名字
+async function fetchUserInfo() {
+  let cu = null;
+  try { cu = (await gql("{userData{currentUser{ name characters{ name server{ name } }}}}")).userData?.currentUser; }
+  catch { try { cu = (await gql("{userData{currentUser{ name }}}")).userData?.currentUser; } catch {} }
+  if (!cu) return;
+  saveUser({ ...userAuth, name: cu.name || null });
+  for (const c of (cu.characters || []).slice(0, 8)) {
+    if (!c?.name || !c.server?.name) continue;
+    if (!history.some(h => h.name === c.name && h.server === c.server.name))
+      history.push({ name: c.name, server: c.server.name, ts: 0 });
+  }
+  history = history.slice(0, 20);
+  LS.set("fpw_history", history);
+}
+
+const hasAuth = () => !!(userAuth && userAuth.base === config.base) || !!(config.clientId && config.clientSecret);
+
+// 鉴权解析：登录 token 优先（过期先试续期），否则自带凭据，都没有才要求配置
+let refreshing = null;   // 并发查询共享一次续期：refresh token 会轮换，重复提交会互相打架
+async function ensureAuth() {
+  if (userAuth && userAuth.base === config.base) {
+    if (Date.now() < userAuth.exp - 60000) return { token: userAuth.token, ep: "/api/v2/user", user: true };
+    if (userAuth.refresh) {
+      try {
+        refreshing ??= oauthToken({ grant_type: "refresh_token", refresh_token: userAuth.refresh })
+          .then(p => saveUser({ ...userAuth, token: p.access_token, refresh: p.refresh_token || userAuth.refresh, exp: Date.now() + (p.expires_in || 3600) * 1000 }))
+          .finally(() => { refreshing = null; });
+        await refreshing;
+        if (userAuth) return { token: userAuth.token, ep: "/api/v2/user", user: true };
+      } catch { saveUser(null); }   // 续期失败：清登录态，落回自带凭据/引导
+    } else saveUser(null);
+  }
   const t = LS.get("fpw_token", null);
-  if (t && t.base === config.base && t.id === config.clientId && Date.now() < t.exp - 60000) return t.token;
+  if (t && t.base === config.base && t.id === config.clientId && Date.now() < t.exp - 60000)
+    return { token: t.token, ep: "/api/v2/client", user: false };
   if (!config.clientId || !config.clientSecret) throw new FFLogsError("NEED_CONFIG");
   const body = new URLSearchParams({
     grant_type: "client_credentials",
@@ -105,23 +201,33 @@ async function ensureToken() {
   if (!r.ok) throw new FFLogsError(`OAuth 失败（HTTP ${r.status}）——检查 Client ID / Secret 是否正确`);
   const p = await r.json();
   LS.set("fpw_token", { token: p.access_token, exp: Date.now() + (p.expires_in || 3600) * 1000, base: config.base, id: config.clientId });
-  return p.access_token;
+  return { token: p.access_token, ep: "/api/v2/client", user: false };
 }
 
 async function gql(query, variables) {
-  const token = await ensureToken();
-  const r = await fetch(config.base + "/api/v2/client", {
-    method: "POST",
-    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables: variables || {} }),
-  });
-  if (r.status === 401) { localStorage.removeItem("fpw_token"); throw new FFLogsError("凭据失效，请重新保存 API 设置"); }
-  if (r.status === 429) throw new FFLogsError("FFLogs 限流（本小时点数用完），稍后再试");
-  if (!r.ok) throw new FFLogsError(`FFLogs 请求失败（HTTP ${r.status}）`);
-  const data = await r.json();
-  // 批量别名查询（31 服探测等）里个别字段出错（如隐藏角色）不拖垮整次请求：有部分数据就用部分数据
-  if (data.errors && !data.data) throw new FFLogsError("GraphQL: " + data.errors.map(e => e.message).join("; "));
-  return data.data || {};
+  for (let retried = false; ;) {
+    const auth = await ensureAuth();
+    const r = await fetch(config.base + auth.ep, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + auth.token, "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables: variables || {} }),
+    });
+    if (r.status === 401) {
+      if (auth.user) {
+        saveUser(null);
+        if (!retried && config.clientId && config.clientSecret) { retried = true; continue; }   // 登录过期 → 降级自带凭据重试一次
+        throw new FFLogsError("NEED_LOGIN");
+      }
+      localStorage.removeItem("fpw_token");
+      throw new FFLogsError("凭据失效，请重新保存 API 设置");
+    }
+    if (r.status === 429) throw new FFLogsError(auth.user ? "FFLogs 限流（你的账号本小时点数用完），稍后再试" : "FFLogs 限流（本小时点数用完），稍后再试");
+    if (!r.ok) throw new FFLogsError(`FFLogs 请求失败（HTTP ${r.status}）`);
+    const data = await r.json();
+    // 批量别名查询（31 服探测等）里个别字段出错（如隐藏角色）不拖垮整次请求：有部分数据就用部分数据
+    if (data.errors && !data.data) throw new FFLogsError("GraphQL: " + data.errors.map(e => e.message).join("; "));
+    return data.data || {};
+  }
 }
 
 /* ============ 副本元数据（encounter → 中文名 / 逻辑 boss 分组） ============ */
@@ -503,8 +609,8 @@ async function updatePoints() {
     const r = d.rateLimitData;
     if (!r) return;
     const mins = Math.ceil((r.pointsResetIn || 0) / 60);
-    const when = mins > 0 ? `，${mins} 分钟后刷新` : "";
-    $("#points").textContent = `API 额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`;
+    const when = mins > 0 ? `，${mins} 分钟后重置` : "";
+    $("#points").textContent = `查询额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`;
   } catch { /* 点数显示是装饰，失败不打扰 */ }
 }
 
@@ -589,9 +695,11 @@ async function runQuery() {
     }
     updatePoints();
   } catch (e) {
-    if (e instanceof FFLogsError && e.message === "NEED_CONFIG") {
-      showMsg("还没有配置 FFLogs API —— 点右上角「API 设置」，两分钟搞定。", true);
-      $("#settings").showModal();
+    if (e instanceof FFLogsError && (e.message === "NEED_CONFIG" || e.message === "NEED_LOGIN")) {
+      showMsg(e.message === "NEED_LOGIN"
+        ? "FFLogs 登录已过期，请重新登录。"
+        : "还没连接 FFLogs —— 登录一次就能查，两分钟搞定。", true);
+      openSettings();
     } else {
       showMsg((e instanceof FFLogsError ? "" : "出错了：") + e.message, true);
     }
@@ -634,7 +742,7 @@ function onInput() {
   const local = history.filter(h => norm(h.name).startsWith(nv))
     .map(h => ({ name: h.name, server: h.server }));
   renderSugg(local);
-  if (v.length < 2 || !config.clientId) return;
+  if (v.length < 2 || !hasAuth()) return;
   const seq = probeSeq;
   probeTimer = setTimeout(async () => {
     renderSugg([...local, { dim: true, text: "全服搜索中…" }]);
@@ -652,11 +760,43 @@ function onInput() {
   }, 600);
 }
 
-/* ---- 设置 ---- */
+/* ---- 设置 / 登录 UI ---- */
+function renderAuthUI() {
+  const btn = $("#settingsBtn");
+  if (userAuth && userAuth.base === config.base) btn.textContent = userAuth.name || "已登录";
+  else if (config.clientId) btn.textContent = "API 设置";
+  else btn.textContent = "登录 FFLogs";
+}
+
+function renderAuthBox() {
+  const box = $("#authBox");
+  box.innerHTML = "";
+  if (userAuth && userAuth.base === config.base) {
+    const row = el("div", "authRow");
+    row.appendChild(el("span", "authName", "已登录：" + (userAuth.name || "FFLogs 用户")));
+    const out = el("button", "ghost", "退出登录");
+    out.type = "button";
+    out.onclick = () => { saveUser(null); renderAuthBox(); };
+    row.appendChild(out);
+    box.appendChild(row);
+  } else if (!OAUTH_CLIENT_ID) {
+    box.appendChild(el("p", "note", "登录功能未启用（站长未配置 OAuth Client ID），请用下方高级方式。"));
+  } else {
+    const b = el("button", "loginBtn", "用 FFLogs 账号登录");
+    b.type = "button";
+    b.onclick = login;
+    box.appendChild(b);
+    box.appendChild(el("p", "hint", "跳转到 FFLogs 官网授权，本站不经手你的密码"));
+  }
+}
+
 function openSettings() {
+  renderAuthBox();
   $("#cfgId").value = config.clientId;
   $("#cfgSecret").value = config.clientSecret;
   $("#cfgBase").value = config.base;
+  // 展开高级区：登录不可用，或本来就在用自带凭据且没登录
+  $("#advBox").open = !OAUTH_CLIENT_ID || (!!config.clientId && !(userAuth && userAuth.base === config.base));
   $("#settings").showModal();
 }
 $("#settings").addEventListener("close", () => {
@@ -668,6 +808,7 @@ $("#settings").addEventListener("close", () => {
   };
   LS.set("fpw_config", config);
   localStorage.removeItem("fpw_token");
+  renderAuthUI();
   updatePoints();
 });
 
@@ -678,5 +819,9 @@ $("#q").addEventListener("input", onInput);
 $("#q").addEventListener("keydown", e => { if (e.isComposing) return; if (e.key === "Enter") { currentChar = null; runQuery(); } });
 $("#q").addEventListener("blur", () => setTimeout(() => $("#sugg").classList.add("hidden"), 150));
 renderChips();
-if (!config.clientId) openSettings();
-else updatePoints();
+(async () => {
+  await handleOAuthCallback();   // 授权回跳先落地，再决定弹不弹引导
+  renderAuthUI();
+  if (!hasAuth()) openSettings();
+  else updatePoints();
+})();

@@ -22,7 +22,7 @@
     </div>
     <div class="sub">RAID PROGRESS · FFLOGS 国服</div>
   </div>
-  <button id="settingsBtn" class="ghost" title="API 设置">API 设置</button>
+  <button id="settingsBtn" class="ghost" title="连接 FFLogs">登录 FFLogs</button>
 </header>
 
 <main>
@@ -44,18 +44,22 @@
 
 <dialog id="settings">
   <form method="dialog">
-    <h2>FFLogs API 设置</h2>
-    <p class="note">本页面不自带 API。请在
-      <a href="https://cn.fflogs.com/api/clients/" target="_blank" rel="noopener">cn.fflogs.com/api/clients</a>
-      创建一个 Client（名字随意，Redirect URL 填 <code>https://localhost</code> 即可），
-      把 Client ID 和 Client Secret 粘贴到这里然后点击保存。API只存在你自己的浏览器里。</p>
-    <label>Client ID<input id="cfgId" autocomplete="off" spellcheck="false"></label>
-    <label>Client Secret<input id="cfgSecret" type="password" autocomplete="off"></label>
-    <label>FFLogs 站点<input id="cfgBase" value="https://cn.fflogs.com" spellcheck="false"></label>
+    <h2>连接 FFLogs</h2>
+    <div id="authBox"></div>
+    <details id="advBox">
+      <summary>使用自己的 API Client（高级）</summary>
+      <p class="note">在
+        <a href="https://cn.fflogs.com/api/clients/" target="_blank" rel="noopener">cn.fflogs.com/api/clients</a>
+        创建一个 Client（名字随意，Redirect URL 填 <code>https://localhost</code> 即可），
+        把 Client ID 和 Client Secret 粘贴到这里然后点击保存。凭据只存在你自己的浏览器里。</p>
+      <label>Client ID<input id="cfgId" autocomplete="off" spellcheck="false"></label>
+      <label>Client Secret<input id="cfgSecret" type="password" autocomplete="off"></label>
+      <label>FFLogs 站点<input id="cfgBase" value="https://cn.fflogs.com" spellcheck="false"></label>
+    </details>
     <div class="row">
       <!-- 保存放 DOM 第一个：form method=dialog 里按回车触发的是第一个提交按钮；视觉顺序由 CSS row-reverse 保持 -->
       <button value="save" id="cfgSave">保存</button>
-      <button value="cancel" class="ghost">取消</button>
+      <button value="cancel" class="ghost">关闭</button>
     </div>
   </form>
 </dialog>
