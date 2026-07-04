@@ -8,7 +8,10 @@
 /* ============ 常量（来自 fflogs_query.py） ============ */
 const ULT_ZONES = [19, 23, 32, 45, 53, 65, 76, 30, 43, 59]; // 含旧绝本 grouping zone
 const IMMUTABLE_MS = 48 * 3600 * 1000;   // 报告开播 48h 后视为不可变
-const WEEK_MS = 7 * 86400 * 1000;
+const DAY_MS = 86400 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+const CST_OFFSET_MS = 8 * 3600 * 1000;
+const REPORT_SCAN_GRACE_MS = 12 * 3600 * 1000; // 覆盖跨 7 天边界的长报告
 const LAST_TTL = 15 * 60 * 1000;         // 同角色同副本 15 分钟内直接复用结果，零请求
 const BATCH = 10;                        // 报告扫描别名批量大小（实测点数最优）
 
@@ -63,9 +66,16 @@ function nameCandidates(name) {
 const pad = n => String(n).padStart(2, "0");
 function fmtCST(ms, full) {
   if (!ms) return null;
-  const d = new Date(ms + 8 * 3600 * 1000);  // CST = UTC+8，用 UTC getter 定格
+  const d = new Date(ms + CST_OFFSET_MS);  // CST = UTC+8，用 UTC getter 定格
   const md = `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
   return full ? `${d.getUTCFullYear()}-${md}` : md;
+}
+function cstDayStart(ms) {
+  return Math.floor((ms + CST_OFFSET_MS) / DAY_MS) * DAY_MS - CST_OFFSET_MS;
+}
+function cstDayLabel(dayStart) {
+  const d = new Date(dayStart + CST_OFFSET_MS);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
 }
 const round2 = x => (x == null ? null : Math.round(x * 100) / 100);
 const rankLess = (a, b) => a[0] !== b[0] ? a[0] - b[0] < 0 : a[1] - b[1] < 0;
@@ -78,6 +88,7 @@ const LS = {
 let config = LS.get("fpw_config", { clientId: "", clientSecret: "", base: "https://cn.fflogs.com" });
 const cache = LS.get("fpw_cache", {});
 for (const k of ["scans", "reports", "resolve", "servers", "last"]) cache[k] ??= {};
+if (cache.v !== 4) { cache.scans = {}; cache.last = {}; cache.v = 4; }
 let history = LS.get("fpw_history", []);
 
 function saveCache() {
@@ -344,7 +355,7 @@ async function resolveCharacter(name, server) {
 /* ============ 报告列表 + 扫描（含缓存/批量，同 Python 版三刀） ============ */
 const REPORT_FIELDS = `startTime
   masterData{ actors(type:"Player"){ id name server subType } }
-  fights{ id encounterID name kill fightPercentage bossPercentage lastPhase startTime friendlyPlayers }`;
+  fights{ id encounterID name kill fightPercentage bossPercentage lastPhase startTime endTime friendlyPlayers }`;
 
 function parseReport(rep, code, wname, wserver, meta) {
   const base = rep.startTime || 0;
@@ -354,12 +365,22 @@ function parseReport(rep, code, wname, wserver, meta) {
     norm(a.name) === wname && (!a.server || norm(a.server) === wserver)).map(a => a.id));
   if (!myIds.size) return {};
   const out = {};
+  const pullsByEid = {};
   for (const f of rep.fights || []) {
     const eid = f.encounterID;
     if (!eid) continue;
     const fp = f.friendlyPlayers || [];
     const mine = fp.filter(id => myIds.has(id));
     if (!mine.length) continue;                    // 本人没上这把（社区聚合报告过滤，关键）
+    const startMs = base + (f.startTime || 0);
+    const endMs = base + (f.endTime ?? f.startTime ?? 0);
+    if (endMs > startMs) {
+      (pullsByEid[eid] ??= []).push({
+        eid, startMs, endMs, durationMs: endMs - startMs,
+        kill: !!f.kill, phase: f.lastPhase,
+        code, fightId: f.id,
+      });
+    }
     const rank = [f.kill ? 0 : 1, f.fightPercentage ?? 999];
     const cur = out[eid];
     if (cur && !rankLess(rank, cur.rank)) continue;
@@ -376,12 +397,15 @@ function parseReport(rep, code, wname, wserver, meta) {
       phase: f.lastPhase,
       hp: round2(f.bossPercentage),
       fp: f.fightPercentage,
-      timeMs: base + (f.startTime || 0),
+      timeMs: startMs,
+      endMs,
+      durationMs: endMs - startMs,
       code, fightId: f.id,
       job: actorMap.get(mine[0])?.subType,
       party,
     };
   }
+  for (const [eid, pulls] of Object.entries(pullsByEid)) if (out[eid]) out[eid].pulls = pulls;
   return out;
 }
 
@@ -474,7 +498,6 @@ async function zoneProgress(name, server, zoneId) {
 
   const rows = [];
   const needScan = [];
-  let wantWeekly = false;
   for (const g of glist) {
     let killed = false, firstMs = null, firstRank = null, specCount = {};
     for (const eid of g.eids) {
@@ -488,7 +511,6 @@ async function zoneProgress(name, server, zoneId) {
       }
     }
     if (killed) {
-      wantWeekly = true;
       rows.push({
         group: g.name, cleared: true, firstMs,
         firstLink: firstRank?.report?.code ? `${config.base}/reports/${firstRank.report.code}#fight=${firstRank.report.fightID}` : null,
@@ -501,18 +523,20 @@ async function zoneProgress(name, server, zoneId) {
 
   // ② 拉报告列表：未通关要最近 40 份；已通关要覆盖最近一周
   const targetZones = new Set(glist.flatMap(g => [...g.zones]));
-  const cutoff = Date.now() - WEEK_MS;
+  const now = Date.now();
+  const cutoff = now - WEEK_MS;
+  const scanCutoff = cutoff - REPORT_SCAN_GRACE_MS;
   const list = await characterReports(name, server, {
     zones: targetZones,
     need: needScan.length ? 40 : 1,
-    untilTs: wantWeekly ? cutoff : null,
+    untilTs: scanCutoff,
   });
   if (list == null) return { rows: [], notFound: true };
 
   const zoneRows = list.filter(r => targetZones.has(r.zone)).sort((a, b) => (b.ts || 0) - (a.ts || 0));
   const scanSet = new Map();
   if (needScan.length) for (const r of zoneRows.slice(0, 40)) scanSet.set(r.code, r);
-  if (wantWeekly) for (const r of zoneRows) if ((r.ts || 0) >= cutoff) scanSet.set(r.code, r);
+  for (const r of zoneRows) if ((r.ts || 0) >= scanCutoff) scanSet.set(r.code, r);
 
   const partials = scanSet.size
     ? await scanReports([...scanSet.values()], norm(name), norm(server), await encMeta().then(m => m.meta))
@@ -520,16 +544,25 @@ async function zoneProgress(name, server, zoneId) {
 
   const eidToGroup = {};
   for (const g of glist) for (const eid of g.eids) eidToGroup[eid] = g.name;
-  const bestAll = {}, bestWeek = {};
+  const bestAll = {}, bestWeek = {}, weekPulls = {};
   for (const p of partials) for (const [eid, cand] of Object.entries(p)) {
     const gname = eidToGroup[eid];
     if (!gname) continue;
     if (!bestAll[gname] || rankLess(cand.rank, bestAll[gname].rank)) bestAll[gname] = cand;
-    if (cand.timeMs >= cutoff && (!bestWeek[gname] || rankLess(cand.rank, bestWeek[gname].rank))) bestWeek[gname] = cand;
+    if ((cand.endMs || cand.timeMs) >= cutoff && (!bestWeek[gname] || rankLess(cand.rank, bestWeek[gname].rank))) bestWeek[gname] = cand;
+    for (const pull of cand.pulls || []) {
+      if (pull.endMs >= cutoff) (weekPulls[gname] ??= []).push(pull);
+    }
   }
 
-  for (const g of needScan) rows.push({ group: g.name, cleared: false, pull: bestAll[g.name] || null });
-  for (const row of rows) if (row.cleared) row.weekPull = bestWeek[row.group] || null;
+  const weekStats = {};
+  for (const g of glist) weekStats[g.name] = buildWeekStat(dedupePulls(weekPulls[g.name] || []), now);
+
+  for (const g of needScan) rows.push({ group: g.name, cleared: false, pull: bestAll[g.name] || null, weekStat: weekStats[g.name] });
+  for (const row of rows) if (row.cleared) {
+    row.weekPull = bestWeek[row.group] || null;
+    row.weekStat = weekStats[row.group];
+  }
 
   rows.sort((a, b) => (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1) || ((a.pull?.fp ?? 999) - (b.pull?.fp ?? 999)));
   return { rows };
@@ -572,7 +605,7 @@ function memberChip(p) {
   return d;
 }
 
-function pullCard(title, pull, statusText, statusCls, extraWhen) {
+function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   const card = el("div", "card");
   const line = el("div", "bossline");
   line.appendChild(el("span", "boss", title));
@@ -594,6 +627,7 @@ function pullCard(title, pull, statusText, statusCls, extraWhen) {
     pull.party.forEach(p => box.appendChild(memberChip(p)));
     card.appendChild(box);
   }
+  if (weekStat) card.appendChild(weeklyChart(weekStat));
   return card;
 }
 
@@ -601,6 +635,226 @@ function progressText(pull) {
   const p = pull.phase ? `P${pull.phase}` : "未知阶段";
   const hp = pull.hp == null ? "未知" : pull.hp + "%";
   return pull.cleared ? "击杀" : `最远 ${p}（boss 剩 ${hp}）`;
+}
+
+function dedupePulls(pulls) {
+  const out = [];
+  for (const p of pulls.sort((a, b) => a.startMs - b.startMs)) {
+    if (out.some(q => q.eid === p.eid
+      && Math.abs(q.durationMs - p.durationMs) <= 2000
+      && Math.abs(q.startMs - p.startMs) <= 5 * 60000)) continue;
+    out.push(p);
+  }
+  return out;
+}
+
+function buildWeekStat(pulls, now) {
+  const today = cstDayStart(now);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const start = today - (6 - i) * DAY_MS;
+    return { key: start, label: cstDayLabel(start), pulls: 0, ms: 0, wipes: {} };
+  });
+  const byDay = new Map(days.map(d => [d.key, d]));
+  for (const p of pulls) {
+    const day = byDay.get(cstDayStart(p.endMs));
+    if (!day) continue;
+    day.pulls++;
+    day.ms += p.durationMs;
+    if (!p.kill && p.phase != null) day.wipes[p.phase] = (day.wipes[p.phase] || 0) + 1;
+  }
+  const wipes = {};
+  for (const d of days) for (const [ph, n] of Object.entries(d.wipes)) wipes[ph] = (wipes[ph] || 0) + n;
+  return {
+    pulls: days.reduce((n, d) => n + d.pulls, 0),
+    ms: days.reduce((n, d) => n + d.ms, 0),
+    wipes,
+    days,
+  };
+}
+
+function durationText(ms) {
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${mins} 分钟`;
+  const hours = mins / 60;
+  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} 小时`;
+}
+
+function phaseEntries(wipes, limit) {
+  const entries = Object.entries(wipes || {}).filter(([, n]) => n > 0);
+  if (limit && entries.length > limit) {
+    return entries.sort((a, b) => b[1] - a[1]).slice(0, limit).sort((a, b) => a[0] - b[0]);
+  }
+  return entries.sort((a, b) => a[0] - b[0]);
+}
+
+function phaseText(wipes, limit) {
+  const entries = phaseEntries(wipes, limit);
+  return entries.length ? entries.map(([p, n]) => `P${p}×${n}`).join(" · ") : "无灭点记录";
+}
+
+/* —— 手绘工具:种子随机 + 平滑抖动路径(贝塞尔过中点,无棱角) —— */
+function seededRand(seed) {
+  let s = Math.floor(Math.abs(seed)) % 2147483647 || 1;
+  return () => (s = s * 16807 % 2147483647) / 2147483647 * 2 - 1;
+}
+
+function wobPath(pts, amp, close, rnd) {
+  const s = [];
+  const edges = pts.length - (close ? 0 : 1);
+  for (let i = 0; i < edges; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    const n = Math.max(2, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 16));
+    for (let k = 0; k < n; k++) {
+      const t = k / n;
+      s.push([a[0] + (b[0] - a[0]) * t + (i || k ? rnd() * amp : 0),
+              a[1] + (b[1] - a[1]) * t + (i || k ? rnd() * amp : 0)]);
+    }
+  }
+  if (!close) s.push(pts[pts.length - 1]);
+  const f = v => v.toFixed(1);
+  const mid = (p, q) => f((p[0] + q[0]) / 2) + "," + f((p[1] + q[1]) / 2);
+  let d;
+  if (close) {
+    d = "M" + mid(s[s.length - 1], s[0]);
+    s.forEach((p, i) => { d += "Q" + f(p[0]) + "," + f(p[1]) + " " + mid(p, s[(i + 1) % s.length]); });
+    return d + "Z";
+  }
+  d = "M" + f(s[0][0]) + "," + f(s[0][1]);
+  for (let i = 1; i < s.length - 1; i++) d += "Q" + f(s[i][0]) + "," + f(s[i][1]) + " " + mid(s[i], s[i + 1]);
+  return d + "L" + f(s[s.length - 1][0]) + "," + f(s[s.length - 1][1]);
+}
+
+/* 上圆下方的八边形轮廓,切角经抖动+曲线自然磨圆 */
+function barPts(x, y, w, h, tc, bc) {
+  return [[x, y + tc], [x + tc, y], [x + w - tc, y], [x + w, y + tc],
+          [x + w, y + h - bc], [x + w - bc, y + h], [x + bc, y + h], [x, y + h - bc]];
+}
+
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+/* 比例分段的灭点色带:段长∝次数,颜色按在场 P 数从浅到深自适应。
+   数字全部写在色带下方当轴注记(块内无字);和左邻打架的注记降一行用引线避让 */
+function wipeStrip(entries, W, H, rnd) {
+  const total = entries.reduce((n, [, c]) => n + c, 0);
+  const k = entries.length;
+  const gap = 4;
+  const usable = W - 2 - gap * (k - 1);
+  const segs = [];
+  let x = 1;
+  entries.forEach(([p, n], i) => {
+    /* ponytail: 最小段宽会让总宽略超出 W,溢出几像素无感,不做归一化 */
+    const w = Math.max(10, usable * n / total);
+    segs.push({ p, n, x, w, cx: x + w / 2, alpha: k === 1 ? .45 : .16 + .56 * i / (k - 1) });
+    x += w + gap;
+  });
+
+  /* 写得下的段:注记静态写在自己正下方(不会互相打架,标签不宽于段宽)。
+     写不下的窄段:注记+引线悬停才浮现,一次只看一个,不占版面 */
+  const lw = s => (`P${s.p}×${s.n}`).length * 7 + 4;
+  const anyNarrow = segs.some(s => s.w < lw(s) + 6);
+  const height = anyNarrow ? H + 30 : H + 18;
+  const svg = svgEl("svg", { class: "wipeStrip", width: W, height, viewBox: `0 0 ${W} ${height}` });
+  for (const s of segs) {
+    const g = svgEl("g", { class: "wipeSegG" }, svg);
+    const pts = barPts(s.x, 1, s.w, H - 2, Math.min(5, s.w * .3), Math.min(4, s.w * .25));
+    svgEl("path", { d: wobPath(pts, 1.1, true, rnd), fill: `rgba(126,101,166,${s.alpha.toFixed(2)})` }, g);
+    svgEl("path", { d: wobPath(pts, .9, true, rnd), class: "segInk" }, g);
+    const label = `P${s.p}×${s.n}`;
+    const half = lw(s) / 2;
+    if (s.w >= lw(s) + 6) {
+      /* 静态注记放 g 外:色块弹跳时字纹丝不动 */
+      svgEl("text", { x: s.cx, y: H + 13, class: "segNote", transform: `rotate(${(rnd() * 2).toFixed(1)} ${s.cx} ${H + 13})` }, svg)
+        .textContent = label;
+    } else {
+      const lx = Math.min(Math.max(s.cx + 22, half), W - half);
+      svgEl("path", { d: wobPath([[s.cx + 1, H + 1], [s.cx + (lx > s.cx ? 8 : -8), H + 11]], .5, false, rnd), class: "segLead segHoverOnly" }, g);
+      svgEl("text", { x: lx, y: H + 25, class: "segNote segHoverOnly", transform: `rotate(-2 ${lx} ${H + 25})` }, g)
+        .textContent = label;
+    }
+  }
+  return svg;
+}
+
+function wipeDistribution(stat) {
+  const entries = phaseEntries(stat.wipes);
+  if (!entries.length) return null;
+  const row = el("div", "wipeDist");
+  row.appendChild(el("span", "wipeLabel", "灭点分布"));
+  const track = el("button", "wipeTrack");
+  track.type = "button";
+  track.setAttribute("aria-label", "灭点分布:" + phaseText(stat.wipes));
+  track.appendChild(wipeStrip(entries, 250, 18, seededRand(stat.ms + stat.pulls)));
+  track.onclick = e => {
+    const g = e.target.closest(".wipeSegG");
+    if (!g) return;
+    g.classList.remove("pop");
+    void track.offsetWidth;
+    g.classList.add("pop");
+  };
+  row.appendChild(track);
+  return row;
+}
+
+function weeklyChart(stat) {
+  const wrap = el("div", "weekStat");
+  const head = el("div", "weekHead");
+  head.appendChild(el("span", "weekTitle", "近7天战斗时长"));
+  head.appendChild(el("span", "weekTotal", `${stat.pulls} 把 · ${durationText(stat.ms)}`));
+  wrap.appendChild(head);
+
+  const max = Math.max(...stat.days.map(d => d.ms), 1);
+  const bars = el("div", "weekBars");
+  const labels = el("div", "weekDays");
+  stat.days.forEach(d => {
+    const rnd = seededRand(d.key / DAY_MS);
+    const bar = el("button", "weekBar");
+    bar.type = "button";
+    bar.style.setProperty("--h", `${d.ms ? Math.max(8, d.ms / max * 100) : 3}%`);
+    bar.style.setProperty("--tilt", `${(rnd() * 1.2).toFixed(2)}deg`);
+    bar.setAttribute("aria-label", `${d.label}，${d.pulls} 把，${durationText(d.ms)}，${phaseText(d.wipes)}`);
+
+    const paint = svgEl("svg", { class: "weekPaint", viewBox: "0 0 100 104", preserveAspectRatio: "none", "aria-hidden": "true" });
+    const h = d.ms ? Math.max(8, d.ms / max * 96) : 3;
+    const x = 19, w = 62, top = 102 - h;
+    const tc = Math.min(11, h * .55), bc = Math.min(3.5, h * .2);
+    const pts = barPts(x, top, w, h, tc, bc);
+    svgEl("path", { d: wobPath(pts, 1.6, true, rnd), class: "wash1" }, paint);
+    if (h > 14) svgEl("path", { d: wobPath(barPts(x + 3, top + 3, w - 5, h - 5, tc, bc), 1.8, true, rnd), class: "wash2" }, paint);
+    svgEl("path", { d: wobPath(pts, 1, true, rnd), class: "inkline" }, paint);
+    bar.appendChild(paint);
+
+    const tip = el("span", "weekTip");
+    tip.appendChild(el("span", "tipTime", `${durationText(d.ms)} · ${d.pulls} 把`));
+    tip.appendChild(el("span", "tipWipe", phaseText(d.wipes)));
+    bar.appendChild(tip);
+    bar.onclick = () => {
+      const showWipes = !(bar.classList.contains("on") && bar.classList.contains("wipeOn"));
+      bars.querySelectorAll(".weekBar.on, .weekBar.wipeOn").forEach(x => x.classList.remove("on", "wipeOn"));
+      bar.classList.remove("pop");
+      void bar.offsetWidth;
+      bar.classList.add("pop");
+      bar.classList.add("on");
+      if (showWipes) bar.classList.add("wipeOn");
+    };
+    bar.onmouseleave = () => bar.classList.remove("on", "wipeOn");
+    bars.appendChild(bar);
+    labels.appendChild(el("span", "weekLabel", d.label));
+  });
+  wrap.appendChild(bars);
+
+  const baseline = svgEl("svg", { class: "weekBase", viewBox: "0 0 600 8", preserveAspectRatio: "none", "aria-hidden": "true" });
+  svgEl("path", { d: wobPath([[2, 4], [598, 3.5]], 1.4, false, seededRand(stat.days[0].key / DAY_MS + 7)) }, baseline);
+  wrap.appendChild(baseline);
+  wrap.appendChild(labels);
+
+  const dist = wipeDistribution(stat);
+  if (dist) wrap.appendChild(dist);
+  return wrap;
 }
 
 async function updatePoints() {
@@ -676,15 +930,16 @@ async function runQuery() {
     }
     for (const row of rows) {
       if (!row.cleared) {
-        if (row.pull) box.appendChild(pullCard(row.group, row.pull, progressText(row.pull), "prog"));
-        else box.appendChild(pullCard(row.group, null, "无记录", "prog"));
+        if (row.pull) box.appendChild(pullCard(row.group, row.pull, progressText(row.pull), "prog", null, row.weekStat));
+        else box.appendChild(pullCard(row.group, null, "无记录", "prog", null, row.weekStat));
       } else if (row.weekPull) {
         box.appendChild(pullCard(row.group, row.weekPull,
-          "已通关 · 本周" + (row.weekPull.cleared ? "击杀" : " " + progressText(row.weekPull)), "clear"));
+          "已通关 · 本周" + (row.weekPull.cleared ? "击杀" : " " + progressText(row.weekPull)), "clear", null, row.weekStat));
       } else {
         const card = pullCard(row.group, null,
           "已通关 · 本周无记录", "clear",
-          row.firstMs ? `首通 ${fmtCST(row.firstMs, true)}` + (JOB_ZH[row.job] ? `（${JOB_ZH[row.job]}）` : "") : null);
+          row.firstMs ? `首通 ${fmtCST(row.firstMs, true)}` + (JOB_ZH[row.job] ? `（${JOB_ZH[row.job]}）` : "") : null,
+          row.weekStat?.pulls ? row.weekStat : null);
         if (row.firstLink) {
           const a = el("a", "logLink", "首通 log ↗");
           a.href = row.firstLink; a.target = "_blank"; a.rel = "noopener";
