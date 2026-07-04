@@ -10,8 +10,8 @@
   --line: rgba(58, 50, 38, .8);        /* 手绘描边 */
   --line-soft: rgba(58, 50, 38, .45);
   --gold: #e2b64c;
-  --accent: #c9552a;                    /* 陶土橙 */
-  --accent-soft: #d97757;
+  --accent: #cc6e64;                    /* E28378 的深一档状态 */
+  --accent-soft: #e28378;
   --heal: #4e7a3d;
   --week-fill: rgba(184, 167, 216, .38);
   --week-fill-hover: rgba(184, 167, 216, .52);
@@ -213,8 +213,8 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .chip.on {
   color: var(--accent);
-  background: rgba(217, 119, 87, .13);
-  border-color: var(--accent-soft);
+  background: rgba(226, 131, 120, .16);
+  border-color: var(--accent);
 }
 
 /* ---------- 结果 ---------- */
