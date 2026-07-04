@@ -145,10 +145,11 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   left: 0; right: 0;
   background: var(--card);
   border: 2px solid var(--line);
-  border-radius: 14px;
+  border-radius: 22px 18px 20px 16px / 18px 21px 16px 19px;
   box-shadow: 4px 6px 0 rgba(58, 50, 38, .1);
   z-index: 10;
   overflow: hidden;
+  padding: 8px 0;
 }
 .sugg.hidden { display: none; }
 .sugg .item {
@@ -227,7 +228,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   margin: 6px 2px 16px;
 }
 .charHead .who { font-size: 27px; font-weight: 700; letter-spacing: .04em; }
-.charHead .meta { font-size: 14px; color: var(--ink-soft); }
+.charHead .meta { display: none; }
 
 .card {
   background: var(--card);
@@ -237,6 +238,19 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   margin-bottom: 18px;
   box-shadow: 4px 6px 0 rgba(58, 50, 38, .08);
   transform: rotate(-.15deg);
+  animation: card-in .38s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+.card:nth-of-type(1) { animation-delay: 0s; }
+.card:nth-of-type(2) { animation-delay: .07s; }
+.card:nth-of-type(3) { animation-delay: .14s; }
+.card:nth-of-type(4) { animation-delay: .21s; }
+.card:nth-of-type(n+5) { animation-delay: .28s; }
+@keyframes card-in {
+  from { opacity: 0; transform: rotate(-.15deg) translateY(10px); }
+  to   { opacity: 1; transform: rotate(-.15deg) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
 }
 .card .bossline {
   display: flex;
@@ -430,7 +444,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   display: block;
   margin-top: 4px;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 13px;
 }
 .wipeDist {
   display: flex;
@@ -478,7 +492,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 .wipeStrip text { font-family: var(--hand); }
 .wipeStrip .segNote {
   fill: var(--ink-soft);
-  font-size: 12px;
+  font-size: 13px;
   text-anchor: middle;
 }
 .wipeStrip .segLead {
@@ -548,7 +562,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .party .member:nth-child(2n) .mname { border-radius: 12px 8px 13px 9px / 9px 13px 8px 12px; }
 .member .ms {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-soft);
   white-space: nowrap;
   padding-left: 8px;
