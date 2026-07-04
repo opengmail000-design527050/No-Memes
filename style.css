@@ -79,12 +79,6 @@ header {
   font-weight: 700;
   letter-spacing: .1em;
 }
-.brand .sub {
-  margin: 8px 0 0 72px;
-  font-size: 12px;
-  letter-spacing: .3em;
-  color: var(--ink-soft);
-}
 /* ---------- 主体 ---------- */
 main {
   max-width: 880px;
@@ -403,7 +397,6 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
 @media (max-width: 560px) {
   .brandTop { gap: 10px; }
   .brandIcon { width: 46px; height: 46px; border-radius: 14px; }
-  .brand .sub { margin-left: 56px; }
   .brand h1 { font-size: 32px; }
   header { padding-top: 30px; }
   .party { grid-template-columns: repeat(2, minmax(0, 1fr)); }  /* 手机放不下 4 列,降为 2 列仍保持 T奶在前 */
