@@ -1,3 +1,4 @@
+@charset "UTF-8";
 /* No进度欺诈 —— 手绘水彩绘本风:奶油纸底、手写字、歪歪扭扭的手绘框 */
 /* ponytail: 插画(莫古力/城堡/云)是真实绘画素材,CSS 只用渐变意会;想要真插画需另备 PNG 素材 */
 
@@ -11,12 +12,7 @@
   --gold: #e2b64c;
   --accent: #c9552a;                    /* 陶土橙 */
   --accent-soft: #d97757;
-  --tank: #3e6ca8;
   --heal: #4e7a3d;
-  --dps:  #a84a38;
-  --tank-bg: #e2eaf4;
-  --heal-bg: #e5eedb;
-  --dps-bg:  #f3e0d8;
   --week-fill: rgba(184, 167, 216, .38);
   --week-fill-hover: rgba(184, 167, 216, .52);
   --week-ink: rgba(82, 66, 112, .82);
@@ -25,6 +21,8 @@
   /* 两种歪法轮着用,免得每个框歪得一样 */
   --wobble-a: 255px 15px 225px 15px / 15px 225px 15px 255px;
   --wobble-b: 15px 225px 15px 255px / 255px 15px 225px 15px;
+  /* 手绘断续墨线(替代机器虚线):笔画长短不一、带轻微起伏,repeat-x 平铺 */
+  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%236e644f' stroke-width='1.4' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
@@ -159,10 +157,12 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   align-items: baseline;
   padding: 10px 14px;
   cursor: pointer;
-  border-top: 1px dashed var(--line-soft);
+  background-image: var(--ink-dash);
+  background-repeat: repeat-x;
+  background-position: left top;
 }
-.sugg .item:first-child { border-top: none; }
-.sugg .item:hover { background: #f4ead2; }
+.sugg .item:first-child { background-image: none; }
+.sugg .item:hover { background-color: #f4ead2; }
 .sugg .item .n { font-size: 17px; }
 .sugg .item .s { font-size: 13px; color: var(--ink-soft); }
 .sugg .item.dim { color: var(--ink-soft); cursor: default; font-size: 13px; justify-content: center; }
@@ -212,9 +212,9 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   box-shadow: 1px 1px 0 rgba(58, 50, 38, .07);
 }
 .chip.on {
-  color: #fdf8ea;
-  background: var(--accent-soft);
-  border-color: rgba(58, 50, 38, .5);
+  color: var(--accent);
+  background: rgba(217, 119, 87, .13);
+  border-color: var(--accent-soft);
 }
 
 /* ---------- 结果 ---------- */
@@ -261,8 +261,10 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 
 .weekStat {
   margin-top: 14px;
-  padding-top: 13px;
-  border-top: 1px dashed var(--line-soft);
+  padding-top: 15px;
+  background-image: var(--ink-dash);
+  background-repeat: repeat-x;
+  background-position: left top;
 }
 .weekHead {
   display: flex;
@@ -505,69 +507,52 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));  /* 严格 4+4:上排 T+奶,下排 DPS(排序已按职能) */
   gap: 12px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--line-soft);
+  margin-top: 18px;   /* 和标题行之间只靠留白分隔,不画线 */
 }
+/* 去框化:名字底下一道低饱和职能色水彩涂抹,图标 multiply 印进纸里 */
 .member {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 13px 8px 9px;
-  border: 1.6px solid rgba(58, 50, 38, .34);
-  border-radius: 16px 12px 15px 13px / 12px 16px 11px 15px;
-  box-shadow: 2px 3px 0 rgba(58, 50, 38, .1);
-  transform: rotate(var(--member-tilt, -.18deg));
+  gap: 8px;
+  padding: 3px 0;
   font-size: 15px;
   min-width: 0;
 }
-.member.tank {
-  background:
-    radial-gradient(120px 34px at 25% 18%, rgba(255, 251, 241, .34), transparent 70%),
-    linear-gradient(100deg, #e6edf4 0%, #e1e9f1 100%);
-}
-.member.heal {
-  background:
-    radial-gradient(120px 34px at 25% 18%, rgba(255, 251, 241, .32), transparent 70%),
-    linear-gradient(100deg, #e9f0e1 0%, #e6edde 100%);
-}
-.member.dps {
-  background:
-    radial-gradient(120px 34px at 25% 18%, rgba(255, 248, 238, .28), transparent 70%),
-    linear-gradient(100deg, #f2ded6 0%, #efd8cf 100%);
-}
-.party .member:nth-child(2n) {
-  --member-tilt: .16deg;
-  border-radius: 13px 17px 12px 15px / 16px 12px 15px 11px;
-}
-.party .member:nth-child(3n) {
-  --member-tilt: -.28deg;
-  border-radius: 17px 13px 16px 12px / 11px 15px 12px 17px;
-}
+.member.tank { --wash: rgba(110, 140, 176, .20); }
+.member.heal { --wash: rgba(120, 150, 104, .19); }
+.member.dps  { --wash: rgba(184, 116, 94, .17); }
 .member img {
-  width: 28px; height: 28px;
-  border-radius: 6px;
+  width: 24px; height: 24px;
+  border-radius: 5px;
   flex: none;
   display: block;
-  transform: rotate(-.5deg);
+  mix-blend-mode: multiply;
+  filter: saturate(.78) contrast(.94);
+  opacity: .92;
 }
 .member .mn {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  align-items: flex-start;
+  line-height: 1.25;
 }
 .member .mname {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 0 8px 1px;
+  background: var(--wash);
+  border-radius: 9px 13px 8px 12px / 12px 8px 13px 9px;
 }
+.party .member:nth-child(2n) .mname { border-radius: 12px 8px 13px 9px / 9px 13px 8px 12px; }
 .member .ms {
   font-size: 12px;
   color: var(--ink-soft);
   white-space: nowrap;
+  padding-left: 8px;
 }
-.member.me .mn { font-weight: 700; }
 
 .msg {
   margin: 26px 2px;
@@ -604,7 +589,9 @@ footer {
   gap: 16px;
   font-size: 13px;
   color: var(--ink-soft);
-  border-top: 1px dashed var(--line-soft);
+  background-image: var(--ink-dash);
+  background-repeat: repeat-x;
+  background-position: left top;
   position: relative;
 }
 #points { white-space: nowrap; }
@@ -654,7 +641,13 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
 #authBox .note { margin-bottom: 4px; }
 .authRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .authRow .authName { font-size: 15px; letter-spacing: .04em; }
-#advBox { margin-top: 16px; border-top: 2px dashed var(--line-soft); padding-top: 12px; }
+#advBox {
+  margin-top: 16px;
+  padding-top: 14px;
+  background-image: var(--ink-dash);
+  background-repeat: repeat-x;
+  background-position: left top;
+}
 #advBox summary { cursor: pointer; font-size: 14px; color: var(--ink-soft); letter-spacing: .05em; margin-bottom: 12px; }
 #advBox summary:hover { color: var(--accent); }
 

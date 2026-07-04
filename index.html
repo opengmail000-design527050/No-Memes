@@ -21,7 +21,7 @@
       <h1>No进度欺诈</h1>
     </div>
   </div>
-  <button id="settingsBtn" class="ghost" title="连接 FFLogs">登录 FFLogs</button>
+  <button id="settingsBtn" class="ghost" title="连接 FF Logs">登录 FF Logs</button>
 </header>
 
 <main>
@@ -30,7 +30,7 @@
     <button id="go">查询</button>
     <div id="sugg" class="sugg hidden"></div>
   </div>
-  <div class="searchHint">基于FF logs的公开数据，上传了才能查到。查不到不等于没打</div>
+  <div class="searchHint">基于 FF Logs 的公开数据，上传了才能查到。查不到不等于没打</div>
 
   <div id="chips" class="chips"></div>
 
@@ -43,7 +43,7 @@
 
 <dialog id="settings">
   <form method="dialog">
-    <h2>连接 FFLogs</h2>
+    <h2>连接 FF Logs</h2>
     <div id="authBox"></div>
     <details id="advBox">
       <summary>使用自己的 API Client（高级）</summary>
@@ -53,7 +53,7 @@
         把 Client ID 和 Client Secret 粘贴到这里然后点击保存。凭据只存在你自己的浏览器里。</p>
       <label>Client ID<input id="cfgId" autocomplete="off" spellcheck="false"></label>
       <label>Client Secret<input id="cfgSecret" type="password" autocomplete="off"></label>
-      <label>FFLogs 站点<input id="cfgBase" value="https://cn.fflogs.com" spellcheck="false"></label>
+      <label>FF Logs 站点<input id="cfgBase" value="https://cn.fflogs.com" spellcheck="false"></label>
     </details>
     <div class="row">
       <!-- 保存放 DOM 第一个：form method=dialog 里按回车触发的是第一个提交按钮；视觉顺序由 CSS row-reverse 保持 -->

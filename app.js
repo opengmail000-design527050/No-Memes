@@ -1,6 +1,6 @@
 /* No进度欺诈 web 版 —— progress_query.py 的浏览器移植。
  * 纯静态、查询直连 cn.fflogs.com（CORS 已验证）。鉴权双模式：
- *   A. FFLogs 账号登录（OAuth 授权码 + PKCE，公共客户端无 secret）→ /api/v2/user，点数各算各的
+ *   A. FF Logs 账号登录（OAuth 授权码 + PKCE，公共客户端无 secret）→ /api/v2/user，点数各算各的
  *   B. 用户自带 client 凭据（高级设置，localStorage）→ /api/v2/client
  * 优先 A，A 的 token 失效且存有 B 凭据时自动降级重试一次。 */
 "use strict";
@@ -15,7 +15,7 @@ const REPORT_SCAN_GRACE_MS = 12 * 3600 * 1000; // 覆盖跨 7 天边界的长报
 const LAST_TTL = 15 * 60 * 1000;         // 同角色同副本 15 分钟内直接复用结果，零请求
 const BATCH = 10;                        // 报告扫描别名批量大小（实测点数最优）
 
-// 副本选择（只绝本，FFLogs 国服完整名，新→旧）
+// 副本选择（只绝本，FF Logs 国服完整名，新→旧）
 const ZONE_TABS = [
   { id: 76, label: "妖星乱舞绝境战" },
   { id: 65, label: "光暗未来绝境战" },
@@ -103,7 +103,7 @@ function saveCache() {
   }
 }
 
-/* ============ FFLogs 客户端 ============ */
+/* ============ FF Logs 客户端 ============ */
 class FFLogsError extends Error {}
 
 // 站长在 cn.fflogs.com/api/clients 创建 Public Client（勾 Public、无 secret，
@@ -129,7 +129,7 @@ async function oauthToken(params) {
     method: "POST",
     body: new URLSearchParams({ client_id: OAUTH_CLIENT_ID, ...params }),
   });
-  if (!r.ok) throw new FFLogsError(`FFLogs 授权失败（HTTP ${r.status}）`);
+  if (!r.ok) throw new FFLogsError(`FF Logs 授权失败（HTTP ${r.status}）`);
   return r.json();
 }
 
@@ -152,7 +152,7 @@ async function handleOAuthCallback() {
   let saved = null;
   try { saved = JSON.parse(sessionStorage.getItem("fpw_pkce") || "null"); } catch {}
   sessionStorage.removeItem("fpw_pkce");
-  if (q.get("error")) { showMsg(`FFLogs 授权未完成（${q.get("error")}）。`, true); return; }
+  if (q.get("error")) { showMsg(`FF Logs 授权未完成（${q.get("error")}）。`, true); return; }
   if (!saved || saved.state !== q.get("state")) { showMsg("登录校验失败（state 不匹配），请重新登录。", true); return; }
   try {
     const p = await oauthToken({
@@ -162,7 +162,7 @@ async function handleOAuthCallback() {
     saveUser({ token: p.access_token, refresh: p.refresh_token || null, exp: Date.now() + (p.expires_in || 3600) * 1000, base: config.base, name: null });
     await fetchUserInfo();
   } catch (e) {
-    showMsg("FFLogs 登录失败：" + e.message, true);
+    showMsg("FF Logs 登录失败：" + e.message, true);
   }
 }
 
@@ -232,8 +232,8 @@ async function gql(query, variables) {
       localStorage.removeItem("fpw_token");
       throw new FFLogsError("凭据失效，请重新保存 API 设置");
     }
-    if (r.status === 429) throw new FFLogsError(auth.user ? "FFLogs 限流（你的账号本小时点数用完），稍后再试" : "FFLogs 限流（本小时点数用完），稍后再试");
-    if (!r.ok) throw new FFLogsError(`FFLogs 请求失败（HTTP ${r.status}）`);
+    if (r.status === 429) throw new FFLogsError(auth.user ? "FF Logs 限流（你的账号本小时点数用完），稍后再试" : "FF Logs 限流（本小时点数用完），稍后再试");
+    if (!r.ok) throw new FFLogsError(`FF Logs 请求失败（HTTP ${r.status}）`);
     const data = await r.json();
     // 批量别名查询（31 服探测等）里个别字段出错（如隐藏角色）不拖垮整次请求：有部分数据就用部分数据
     if (data.errors && !data.data) throw new FFLogsError("GraphQL: " + data.errors.map(e => e.message).join("; "));
@@ -281,7 +281,7 @@ async function cnServers() {
   if (hit && Date.now() - hit.ts < 30 * 86400 * 1000) return hit.v;
   const regs = (await gql("{worldData{regions{id slug}}}")).worldData?.regions || [];
   const rid = regs.find(r => r.slug === "CN")?.id;
-  if (rid == null) throw new FFLogsError("FFLogs 上没有 CN 大区");
+  if (rid == null) throw new FFLogsError("FF Logs 上没有 CN 大区");
   const d = await gql("query($id:Int!){worldData{region(id:$id){subregions{servers(limit:100){data{name}}}}}}", { id: rid });
   const names = (d.worldData?.region?.subregions || []).flatMap(s => (s.servers?.data || []).map(x => x.name));
   if (names.length) cache.servers.CN = { ts: Date.now(), v: names };
@@ -315,7 +315,7 @@ async function searchCharacter(name) {
   if (!anyOk && lastErr) throw lastErr;
   const active = hits.filter(h => h.lastTs > 0);   // 没传过 log 的没进度可查
   if (!active.length) return { hits: hits };
-  // 名字精确命中优先（FFLogs 会把改过名的老角色也匹配出来），再按最近上传排
+  // 名字精确命中优先（FF Logs 会把改过名的老角色也匹配出来），再按最近上传排
   active.sort((a, b) => (normset.has(norm(a.name)) ? 0 : 1) - (normset.has(norm(b.name)) ? 0 : 1) || b.lastTs - a.lastTs);
   const best = active[0];
   const others = active.slice(1).filter(h => normset.has(norm(h.name))).map(h => h.server);
@@ -896,7 +896,7 @@ async function runQuery() {
       const r = await resolveCharacter(n.trim(), s.trim());
       if (!r.name) {
         showMsg(s
-          ? `FFLogs 上没找到角色「${n}@${s}」。\n确认服务器名和写法（黒/黑 已自动多试）；也可以只输入角色名全服自动找。\n查不到 ≠ 没打 —— 可能没传过 log。`
+          ? `FF Logs 上没找到角色「${n}@${s}」。\n确认服务器名和写法（黒/黑 已自动多试）；也可以只输入角色名全服自动找。\n查不到 ≠ 没打 —— 可能没传过 log。`
           : `全国服都没搜到叫「${n}」且传过 log 的角色。\n确认名字写法；「没找到 ≠ 没打」——可能没传过 log，或传到了国际服站。`);
         return;
       }
@@ -926,7 +926,7 @@ async function runQuery() {
     const { rows, notFound } = res;
     box.querySelector(".spin").remove();
     if (notFound || !rows.length) {
-      box.appendChild(el("div", "msg", "FFLogs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。"));
+      box.appendChild(el("div", "msg", "FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。"));
     }
     for (const row of rows) {
       if (!row.cleared) {
@@ -952,8 +952,8 @@ async function runQuery() {
   } catch (e) {
     if (e instanceof FFLogsError && (e.message === "NEED_CONFIG" || e.message === "NEED_LOGIN")) {
       showMsg(e.message === "NEED_LOGIN"
-        ? "FFLogs 登录已过期，请重新登录。"
-        : "还没连接 FFLogs —— 登录一次就能查，两分钟搞定。", true);
+        ? "FF Logs 登录已过期，请重新登录。"
+        : "还没连接 FF Logs —— 登录一次就能查，两分钟搞定。", true);
       openSettings();
     } else {
       showMsg((e instanceof FFLogsError ? "" : "出错了：") + e.message, true);
@@ -1020,7 +1020,7 @@ function renderAuthUI() {
   const btn = $("#settingsBtn");
   if (userAuth && userAuth.base === config.base) btn.textContent = userAuth.name || "已登录";
   else if (config.clientId) btn.textContent = "API 设置";
-  else btn.textContent = "登录 FFLogs";
+  else btn.textContent = "登录 FF Logs";
 }
 
 function renderAuthBox() {
@@ -1028,7 +1028,7 @@ function renderAuthBox() {
   box.innerHTML = "";
   if (userAuth && userAuth.base === config.base) {
     const row = el("div", "authRow");
-    row.appendChild(el("span", "authName", "已登录：" + (userAuth.name || "FFLogs 用户")));
+    row.appendChild(el("span", "authName", "已登录：" + (userAuth.name || "FF Logs 用户")));
     const out = el("button", "ghost", "退出登录");
     out.type = "button";
     out.onclick = () => { saveUser(null); renderAuthBox(); };
@@ -1037,11 +1037,11 @@ function renderAuthBox() {
   } else if (!OAUTH_CLIENT_ID) {
     box.appendChild(el("p", "note", "登录功能未启用（站长未配置 OAuth Client ID），请用下方高级方式。"));
   } else {
-    const b = el("button", "loginBtn", "用 FFLogs 账号登录");
+    const b = el("button", "loginBtn", "用 FF Logs 账号登录");
     b.type = "button";
     b.onclick = login;
     box.appendChild(b);
-    box.appendChild(el("p", "hint", "跳转到 FFLogs 官网授权，本站不经手你的密码"));
+    box.appendChild(el("p", "hint", "跳转到 FF Logs 官网授权，本站不经手你的密码"));
   }
 }
 
