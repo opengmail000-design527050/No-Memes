@@ -544,12 +544,15 @@ async function zoneProgress(name, server, zoneId) {
 
   const eidToGroup = {};
   for (const g of glist) for (const eid of g.eids) eidToGroup[eid] = g.name;
-  const bestAll = {}, bestWeek = {}, weekPulls = {};
+  const bestAll = {}, bestWeek = {}, weekPulls = {}, lastKill = {};
   for (const p of partials) for (const [eid, cand] of Object.entries(p)) {
     const gname = eidToGroup[eid];
     if (!gname) continue;
     if (!bestAll[gname] || rankLess(cand.rank, bestAll[gname].rank)) bestAll[gname] = cand;
-    if ((cand.endMs || cand.timeMs) >= cutoff && (!bestWeek[gname] || rankLess(cand.rank, bestWeek[gname].rank))) bestWeek[gname] = cand;
+    if ((cand.endMs || cand.timeMs) >= cutoff) {
+      if (!bestWeek[gname] || rankLess(cand.rank, bestWeek[gname].rank)) bestWeek[gname] = cand;
+      if (cand.cleared && (!lastKill[gname] || cand.endMs > lastKill[gname].endMs)) lastKill[gname] = cand;
+    }
     for (const pull of cand.pulls || []) {
       if (pull.endMs >= cutoff) (weekPulls[gname] ??= []).push(pull);
     }
@@ -561,6 +564,7 @@ async function zoneProgress(name, server, zoneId) {
   for (const g of needScan) rows.push({ group: g.name, cleared: false, pull: bestAll[g.name] || null, weekStat: weekStats[g.name] });
   for (const row of rows) if (row.cleared) {
     row.weekPull = bestWeek[row.group] || null;
+    row.weekKill = lastKill[row.group] || null;   // 近7天最新的那把通关（带小队/职业/log 链接）
     row.weekStat = weekStats[row.group];
   }
 
@@ -609,10 +613,16 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   const card = el("div", "card");
   const line = el("div", "bossline");
   line.appendChild(el("span", "boss", title));
-  line.appendChild(el("span", "status " + statusCls, statusText));
+  // 进度类只刷主文案；近7天真实击杀保留“最近通关 · 职业 · 时间”整条笔刷。
+  const parts = [statusText];
   const whenParts = [];
-  if (pull?.job && JOB_ZH[pull.job]) whenParts.push(JOB_ZH[pull.job]);
-  if (pull?.timeMs) whenParts.push(fmtCST(pull.timeMs));
+  const metaParts = pull?.cleared && statusCls === "clear" ? parts : whenParts;
+  if (pull?.job && JOB_ZH[pull.job]) metaParts.push(JOB_ZH[pull.job]);
+  if (pull?.timeMs) metaParts.push(fmtCST(pull.timeMs));
+  const badge = el("span", "status " + statusCls);
+  badge.appendChild(brushStroke(pull?.timeMs || 1, statusCls === "clear" ? null : "222,140,110"));
+  badge.appendChild(el("span", "badgeTxt", parts.join(" · ")));
+  line.appendChild(badge);
   if (extraWhen) whenParts.push(extraWhen);
   if (whenParts.length) line.appendChild(el("span", "when", whenParts.join(" · ")));
   if (pull?.code) {
@@ -629,6 +639,32 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   }
   if (weekStat) card.appendChild(weeklyChart(weekStat));
   return card;
+}
+
+/* 头部徽章的笔刷底:上下平行、微微错开的两笔半透明水彩(交叠处自然加深),
+   viewBox 拉伸铺满徽章,随文字长短自适应 */
+function brushStroke(seed, rgb) {
+  rgb = rgb || "88,214,141";
+  const rnd = seededRand(seed);
+  const svg = svgEl("svg", { class: "badgeBrush", viewBox: "0 0 120 30", preserveAspectRatio: "none", "aria-hidden": "true" });
+  svgEl("path", { d: wobPath(barPts(2, 3, 110, 16, 7, 6), 2.4, true, rnd), fill: `rgba(${rgb},.30)`, transform: "rotate(-.6 57 11)" }, svg);
+  svgEl("path", { d: wobPath(barPts(8, 12, 108, 15, 6, 5), 2.6, true, rnd), fill: `rgba(${rgb},.28)`, transform: "rotate(.8 62 20)" }, svg);
+  return svg;
+}
+
+// ID 右边的「已通关 · 职业 · 首通日期」徽章,点击跳首通 log
+function clearBadge(row) {
+  const a = el("a", "clearBadge");
+  if (row.firstLink) { a.href = row.firstLink; a.target = "_blank"; a.rel = "noopener"; }
+  let date = null;
+  if (row.firstMs) {
+    const y = new Date(row.firstMs + CST_OFFSET_MS).getUTCFullYear();
+    const md = fmtCST(row.firstMs).slice(0, 5);
+    date = y === new Date(Date.now() + CST_OFFSET_MS).getUTCFullYear() ? md : `${y}-${md}`;
+  }
+  a.appendChild(brushStroke(row.firstMs || 1));
+  a.appendChild(el("span", "badgeTxt", ["已通关", JOB_ZH[row.job], date].filter(Boolean).join(" · ")));
+  return a;
 }
 
 function progressText(pull) {
@@ -666,6 +702,7 @@ function buildWeekStat(pulls, now) {
   for (const d of days) for (const [ph, n] of Object.entries(d.wipes)) wipes[ph] = (wipes[ph] || 0) + n;
   return {
     pulls: days.reduce((n, d) => n + d.pulls, 0),
+    kills: pulls.filter(p => p.kill).length,
     ms: days.reduce((n, d) => n + d.ms, 0),
     wipes,
     days,
@@ -880,9 +917,11 @@ function pushHistory(name, server) {
   LS.set("fpw_history", history);
 }
 
+let querySeq = 0;
 async function runQuery() {
   const raw = $("#q").value.trim();
   if (!raw && !currentChar) return;
+  const seq = ++querySeq; // 新查询启动后，旧的在途查询作废
   $("#sugg").classList.add("hidden");
   const box = $("#result");
   box.innerHTML = "";
@@ -894,6 +933,7 @@ async function runQuery() {
     else {
       const [n, s] = raw.includes("@") ? raw.split("@", 2) : [raw, ""];
       const r = await resolveCharacter(n.trim(), s.trim());
+      if (seq !== querySeq) return;
       if (!r.name) {
         showMsg(s
           ? `FF Logs 上没找到角色「${n}@${s}」。\n确认服务器名和写法（黒/黑 已自动多试）；也可以只输入角色名全服自动找。\n查不到 ≠ 没打 —— 可能没传过 log。`
@@ -923,8 +963,9 @@ async function runQuery() {
       res = await zoneProgress(name, server, currentZone);
       cache.last[lk] = { ts: Date.now(), v: res };
     }
+    if (seq !== querySeq) return;
     const { rows, notFound } = res;
-    box.querySelector(".spin").remove();
+    box.querySelector(".spin")?.remove();
     if (notFound || !rows.length) {
       box.appendChild(el("div", "msg", "FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。"));
     }
@@ -932,28 +973,27 @@ async function runQuery() {
       if (!row.cleared) {
         if (row.pull) box.appendChild(pullCard(row.group, row.pull, progressText(row.pull), "prog", null, row.weekStat));
         else box.appendChild(pullCard(row.group, null, "无记录", "prog", null, row.weekStat));
+        continue;
+      }
+      if (!head.querySelector(".clearBadge")) head.appendChild(clearBadge(row));
+      if (row.weekKill) {
+        // 通关时刻=那把的 endMs（boss 倒下那一刻），不是 startMs（那把开始时间）
+        box.appendChild(pullCard(row.group, { ...row.weekKill, timeMs: row.weekKill.endMs },
+          "最近通关", "clear", `近7天过本${row.weekStat?.kills || 1}次`, row.weekStat));
       } else if (row.weekPull) {
-        box.appendChild(pullCard(row.group, row.weekPull,
-          "已通关 · 本周" + (row.weekPull.cleared ? "击杀" : " " + progressText(row.weekPull)), "clear", null, row.weekStat));
+        box.appendChild(pullCard(row.group, row.weekPull, "近7天" + progressText(row.weekPull), "clear", null, row.weekStat));
       } else {
-        const card = pullCard(row.group, null,
-          "已通关 · 本周无记录", "clear",
-          row.firstMs ? `首通 ${fmtCST(row.firstMs, true)}` + (JOB_ZH[row.job] ? `（${JOB_ZH[row.job]}）` : "") : null,
-          row.weekStat?.pulls ? row.weekStat : null);
-        if (row.firstLink) {
-          const a = el("a", "logLink", "首通 log ↗");
-          a.href = row.firstLink; a.target = "_blank"; a.rel = "noopener";
-          card.querySelector(".bossline").appendChild(a);
-        }
-        box.appendChild(card);
+        box.appendChild(pullCard(row.group, null, "近7天无记录", "clear", null,
+          row.weekStat?.pulls ? row.weekStat : null));
       }
     }
     updatePoints();
   } catch (e) {
+    if (seq !== querySeq) return; // 已被新查询取代，别用旧错误盖掉新结果
     if (e instanceof FFLogsError && (e.message === "NEED_CONFIG" || e.message === "NEED_LOGIN")) {
       showMsg(e.message === "NEED_LOGIN"
         ? "FF Logs 登录已过期，请重新登录。"
-        : "还没连接 FF Logs —— 登录一次就能查，两分钟搞定。", true);
+        : "还没连接 FF Logs —— 登录一次就能查，1分钟搞定。", true);
       openSettings();
     } else {
       showMsg((e instanceof FFLogsError ? "" : "出错了：") + e.message, true);
