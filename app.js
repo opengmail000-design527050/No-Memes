@@ -918,11 +918,12 @@ function pushHistory(name, server) {
 }
 
 let querySeq = 0;
+let selectQueryOnFocus = false;
 async function runQuery() {
   const raw = $("#q").value.trim();
   if (!raw && !currentChar) return;
   const seq = ++querySeq; // 新查询启动后，旧的在途查询作废
-  $("#sugg").classList.add("hidden");
+  hideSugg();
   const box = $("#result");
   box.innerHTML = "";
   box.appendChild(el("div", "spin", "查询中"));
@@ -1000,11 +1001,18 @@ async function runQuery() {
     }
   } finally {
     saveCache();
+    if (seq === querySeq) selectQueryOnFocus = true;
   }
 }
 
 /* ---- 搜索建议：本地历史即时 + 完整名停顿探测 ---- */
 let probeTimer = null, probeSeq = 0;
+function hideSugg() {
+  clearTimeout(probeTimer);
+  probeSeq++;
+  $("#sugg").classList.add("hidden");
+}
+
 function renderSugg(items) {
   const box = $("#sugg");
   box.innerHTML = "";
@@ -1028,6 +1036,7 @@ function renderSugg(items) {
 }
 
 function onInput() {
+  selectQueryOnFocus = false;
   const v = $("#q").value.trim();
   currentChar = null;
   clearTimeout(probeTimer);
@@ -1053,6 +1062,13 @@ function onInput() {
       if (seq === probeSeq) renderSugg(local);
     }
   }, 600);
+}
+
+function selectQueryTextSoon() {
+  const q = $("#q");
+  if (!selectQueryOnFocus || !q.value) return;
+  selectQueryOnFocus = false;        // 查完后只全选这一次,之后点击恢复正常编辑(光标落在点击处)
+  requestAnimationFrame(() => q.select());
 }
 
 /* ---- 设置 / 登录 UI ---- */
@@ -1111,8 +1127,10 @@ $("#settings").addEventListener("close", () => {
 $("#settingsBtn").onclick = openSettings;
 $("#go").onclick = () => { currentChar = null; runQuery(); };
 $("#q").addEventListener("input", onInput);
-$("#q").addEventListener("keydown", e => { if (e.isComposing) return; if (e.key === "Enter") { currentChar = null; runQuery(); } });
-$("#q").addEventListener("blur", () => setTimeout(() => $("#sugg").classList.add("hidden"), 150));
+$("#q").addEventListener("focus", selectQueryTextSoon);
+$("#q").addEventListener("click", selectQueryTextSoon);
+$("#q").addEventListener("keydown", e => { if (e.isComposing) return; if (e.key === "Enter") { e.preventDefault(); currentChar = null; runQuery(); } });
+$("#q").addEventListener("blur", () => setTimeout(hideSugg, 150));
 renderChips();
 (async () => {
   await handleOAuthCallback();   // 授权回跳先落地，再决定弹不弹引导
