@@ -753,8 +753,8 @@ header { gap: 10px; }
 
 /* ---------- 暗色模式 ---------- */
 html[data-theme="dark"] {
-  --paper: #2b2620;
-  --card: #352f27;
+  --paper: #302F2E;
+  --card: #2C2B2A;
   --ink: #e8e0d0;
   --ink-soft: #a89a80;
   --line: rgba(232, 224, 208, .8);
@@ -776,7 +776,7 @@ html[data-theme="dark"] {
 html[data-theme="dark"] ::selection { background: rgba(224, 138, 107, .28); }
 html[data-theme="dark"] body {
   background:
-    radial-gradient(1200px 600px at 50% -200px, #3a332a 0%, transparent 70%),
+    radial-gradient(1200px 600px at 50% -200px, #3a3938 0%, transparent 70%),
     var(--paper);
 }
 html[data-theme="dark"] .sugg .item:hover { background-color: #3d362d; }
