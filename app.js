@@ -12,7 +12,7 @@ const DAY_MS = 86400 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 const CST_OFFSET_MS = 8 * 3600 * 1000;
 const REPORT_SCAN_GRACE_MS = 12 * 3600 * 1000; // 覆盖跨 7 天边界的长报告
-const LAST_TTL = 15 * 60 * 1000;         // 同角色同副本 15 分钟内直接复用结果，零请求
+const LAST_TTL = 60 * 60 * 1000;         // 同角色同副本 1 小时内复用结果（40 秒 stamp 探测兜底新报告，见 canUseLastHit）
 const REPORT_PROBE_TTL = 40 * 1000;      // 命中结果缓存时，最多 40 秒探测一次新上传报告
 const BATCH = 10;                        // 报告扫描别名批量大小（实测点数最优）
 
@@ -289,7 +289,13 @@ async function cnServers() {
   return names;
 }
 
+// 31 服探测缓存：建议列表和回车正式查询会对同一个名字各打一轮（~2 点/轮），10 分钟内直接复用
+const probeCache = new Map();   // ponytail: 只存内存不落盘，跨会话复用价值低
+const PROBE_CACHE_TTL = 10 * 60 * 1000;
+
 async function probeServers(name, servers) {
+  const pc = probeCache.get(name);
+  if (pc && Date.now() - pc.ts < PROBE_CACHE_TTL) return pc.hits;
   const alias = servers.map((s, i) =>
     `s${i}: character(name:${JSON.stringify(name)},serverSlug:${JSON.stringify(s)},serverRegion:"CN"){ name server{ name } recentReports(limit:1){ data{ startTime } } }`
   ).join("\n");
@@ -300,6 +306,7 @@ async function probeServers(name, servers) {
     if (!ch) return;
     hits.push({ name: ch.name, server: ch.server?.name || srv, lastTs: ch.recentReports?.data?.[0]?.startTime || 0 });
   });
+  probeCache.set(name, { ts: Date.now(), hits });   // 查无此人也缓存，重试同名不再烧点
   return hits;
 }
 
@@ -335,21 +342,20 @@ async function resolveCharacter(name, server) {
     if (r.name) cache.resolve[ck] = { ts: Date.now(), v: [r.name, r.server] };
     return r.name ? r : { name: null };
   }
-  let anyOk = false, lastErr = null;
-  for (const cand of nameCandidates(name)) {
-    let d;
-    try {
-      d = await gql("query($n:String!,$s:String!){characterData{character(name:$n,serverSlug:$s,serverRegion:\"CN\"){ name server{ name } }}}", { n: cand, s: server });
-    } catch (e) { lastErr = e; continue; }
-    anyOk = true;
-    const ch = d.characterData?.character;
+  // 异体字候选合并成一个别名批量查询（原来逐个单发，最多 16 次请求）
+  const cands = nameCandidates(name).slice(0, 8);
+  const alias = cands.map((c, i) =>
+    `c${i}: character(name:${JSON.stringify(c)},serverSlug:${JSON.stringify(server)},serverRegion:"CN"){ name server{ name } }`
+  ).join("\n");
+  const cd = (await gql(`query{ characterData{ ${alias} }}`)).characterData || {};
+  for (let i = 0; i < cands.length; i++) {
+    const ch = cd["c" + i];
     if (ch) {
       const v = [ch.name, ch.server?.name || server];
       cache.resolve[ck] = { ts: Date.now(), v };
       return { name: v[0], server: v[1], note: null };
     }
   }
-  if (!anyOk && lastErr) throw lastErr;   // 全是限流/网络错 ≠ 角色不存在
   return { name: null };
 }
 
