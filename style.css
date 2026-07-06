@@ -779,7 +779,7 @@ html[data-theme="dark"] body {
     radial-gradient(1200px 600px at 50% -200px, #3a3938 0%, transparent 70%),
     var(--paper);
 }
-html[data-theme="dark"] .sugg .item:hover { background-color: #3d362d; }
+html[data-theme="dark"] .sugg .item:hover { background-color: #3b3a38; }
 html[data-theme="dark"] .charHead .clearBadge { color: #7fc99a; }
 html[data-theme="dark"] .card .status.clear { color: #7fc99a; }
 html[data-theme="dark"] .card .status.prog  { color: #d99277; }
@@ -790,8 +790,8 @@ html[data-theme="dark"] .weekBase path { stroke: rgba(232, 224, 208, .45); }
 html[data-theme="dark"] .wipeStrip .segInk { stroke: rgba(232, 224, 208, .5); }
 html[data-theme="dark"] .wipeStrip .segLead { stroke: rgba(232, 224, 208, .45); }
 html[data-theme="dark"] dialog::backdrop { background: rgba(0, 0, 0, .5); }
-html[data-theme="dark"] dialog .note code { background: #3d362d; }
-html[data-theme="dark"] dialog input { background: #2a2520; color: var(--ink); }
+html[data-theme="dark"] dialog .note code { background: #3b3a38; }
+html[data-theme="dark"] dialog input { background: #262524; color: var(--ink); }
 html[data-theme="dark"] .member.tank { --wash: rgba(130, 165, 205, .26); }
 html[data-theme="dark"] .member.heal { --wash: rgba(140, 175, 125, .25); }
 html[data-theme="dark"] .member.dps  { --wash: rgba(205, 140, 118, .23); }

@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="icons/favicon.png?v=2">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>document.documentElement.dataset.theme=localStorage.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')</script>
+<script>{const t=localStorage.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]').content=t==='dark'?'#302F2E':'#FAF3E5'}</script>
 <link rel="stylesheet" href="fonts/lxgwwenkaiscreen.css">
 <link rel="stylesheet" href="style.css">
 </head>
