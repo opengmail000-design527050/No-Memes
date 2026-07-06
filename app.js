@@ -88,7 +88,7 @@ const LS = {
 };
 let config = LS.get("fpw_config", { clientId: "", clientSecret: "", base: "https://cn.fflogs.com" });
 const cache = LS.get("fpw_cache", {});
-for (const k of ["scans", "reports", "resolve", "servers", "last"]) cache[k] ??= {};
+for (const k of ["scans", "reports", "resolve", "servers", "last", "cleared"]) cache[k] ??= {};
 if (cache.v !== 4) { cache.scans = {}; cache.last = {}; cache.v = 4; }
 let history = LS.get("fpw_history", []);
 
@@ -310,12 +310,13 @@ async function probeServers(name, servers) {
   return hits;
 }
 
-async function searchCharacter(name) {
+// maxCands：建议列表打一半时名字多半不完整，异体字候选全试必然全落空白烧点，只试原始拼写
+async function searchCharacter(name, maxCands = 4) {
   const servers = await cnServers();
   const cands = nameCandidates(name);
   const normset = new Set(cands.map(norm));
   let hits = [], anyOk = false, lastErr = null;
-  for (const cand of cands.slice(0, 4)) {
+  for (const cand of cands.slice(0, maxCands)) {
     try { hits = await probeServers(cand, servers); } catch (e) { lastErr = e; continue; }
     anyOk = true;
     if (hits.length) break;
@@ -530,35 +531,43 @@ async function zoneProgress(name, server, zoneId) {
   const glist = groups.filter(g => g.zones.has(zoneId));
   if (!glist.length) throw new FFLogsError("这个副本没有 encounter 数据");
 
-  // ① 通关判定：所有 era id 合并成一次查询
-  const alias = glist.flatMap(g => g.eids.map(eid =>
-    `e${eid}: encounterRankings(encounterID:${eid},metric:rdps,timeframe:Historical)`
-  )).join("\n");
-  const ch = (await gql(`query($n:String!,$s:String!){characterData{character(name:$n,serverSlug:$s,serverRegion:"CN"){ ${alias} }}}`,
-    { n: name, s: server })).characterData?.character || {};
-
-  const rows = [];
+  // ① 通关判定：通关是不可逆的历史事实（首通时间/链接/职业定格），确认过一次就永久缓存，
+  //    只对还没确认通关的 boss 发 encounterRankings；全通角色这一步零请求
+  const clearKey = norm(`${name}@${server}`) + "|CN";
+  const known = cache.cleared[clearKey] ??= {};
+  const rows = glist.filter(g => known[g.name]).map(g => ({ ...known[g.name] }));
   const needScan = [];
-  for (const g of glist) {
-    let killed = false, firstMs = null, firstRank = null, specCount = {};
-    for (const eid of g.eids) {
-      const er = ch["e" + eid];
-      if (!er) continue;
-      if ((er.totalKills || 0) > 0) killed = true;
-      for (const r of er.ranks || []) {
-        if (r.startTime != null && (firstMs == null || r.startTime < firstMs)) { firstMs = r.startTime; firstRank = r; }
-        const sp = r.spec || r.bestSpec;
-        if (sp) specCount[sp] = (specCount[sp] || 0) + 1;
+  const unknown = glist.filter(g => !known[g.name]);
+  if (unknown.length) {
+    const alias = unknown.flatMap(g => g.eids.map(eid =>
+      `e${eid}: encounterRankings(encounterID:${eid},metric:rdps,timeframe:Historical)`
+    )).join("\n");
+    const ch = (await gql(`query($n:String!,$s:String!){characterData{character(name:$n,serverSlug:$s,serverRegion:"CN"){ ${alias} }}}`,
+      { n: name, s: server })).characterData?.character || {};
+
+    for (const g of unknown) {
+      let killed = false, firstMs = null, firstRank = null, specCount = {};
+      for (const eid of g.eids) {
+        const er = ch["e" + eid];
+        if (!er) continue;
+        if ((er.totalKills || 0) > 0) killed = true;
+        for (const r of er.ranks || []) {
+          if (r.startTime != null && (firstMs == null || r.startTime < firstMs)) { firstMs = r.startTime; firstRank = r; }
+          const sp = r.spec || r.bestSpec;
+          if (sp) specCount[sp] = (specCount[sp] || 0) + 1;
+        }
       }
-    }
-    if (killed) {
-      rows.push({
-        group: g.name, cleared: true, firstMs,
-        firstLink: firstRank?.report?.code ? `${config.base}/reports/${firstRank.report.code}#fight=${firstRank.report.fightID}` : null,
-        job: Object.entries(specCount).sort((a, b) => b[1] - a[1])[0]?.[0],
-      });
-    } else {
-      needScan.push(g);
+      if (killed) {
+        const row = {
+          group: g.name, cleared: true, firstMs,
+          firstLink: firstRank?.report?.code ? `${config.base}/reports/${firstRank.report.code}#fight=${firstRank.report.fightID}` : null,
+          job: Object.entries(specCount).sort((a, b) => b[1] - a[1])[0]?.[0],
+        };
+        known[g.name] = row;
+        rows.push({ ...row });   // 副本给渲染层挂周数据用，缓存里只留定格字段
+      } else {
+        needScan.push(g);
+      }
     }
   }
 
@@ -1093,7 +1102,7 @@ function onInput() {
   probeTimer = setTimeout(async () => {
     renderSugg([...local, { dim: true, text: "全服搜索中…" }]);
     try {
-      const r = await searchCharacter(v);
+      const r = await searchCharacter(v, 1);
       if (seq !== probeSeq) return;   // 输入已变，丢弃
       const remote = (r.hits || []).filter(h => h.lastTs > 0)
         .map(h => ({ name: h.name, server: h.server, when: h.lastTs ? fmtCST(h.lastTs).slice(0, 5) : "" }))
