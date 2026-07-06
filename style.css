@@ -3,7 +3,7 @@
 /* ponytail: 插画(莫古力/城堡/云)是真实绘画素材,CSS 只用渐变意会;想要真插画需另备 PNG 素材 */
 
 :root {
-  --paper: #f8efdc;
+  --paper: #FAF3E5;
   --card: #fdf8ea;
   --ink: #3a3226;
   --ink-soft: #6e644f;
@@ -45,10 +45,8 @@ body {
   overflow-x: hidden;
   font-family: var(--hand);
   color: var(--ink);
-  /* 水彩意象:顶部两角淡云 + 中央暖光 */
+  /* 水彩意象:中央暖光 */
   background:
-    radial-gradient(280px 100px at 4% 10%, rgba(185, 202, 214, .4), transparent 70%),
-    radial-gradient(320px 110px at 96% 16%, rgba(185, 202, 214, .34), transparent 70%),
     radial-gradient(1200px 600px at 50% -200px, #fdf6e4 0%, transparent 70%),
     var(--paper);
   background-attachment: fixed;
@@ -778,8 +776,6 @@ html[data-theme="dark"] {
 html[data-theme="dark"] ::selection { background: rgba(224, 138, 107, .28); }
 html[data-theme="dark"] body {
   background:
-    radial-gradient(280px 100px at 4% 10%, rgba(90, 110, 130, .28), transparent 70%),
-    radial-gradient(320px 110px at 96% 16%, rgba(90, 110, 130, .22), transparent 70%),
     radial-gradient(1200px 600px at 50% -200px, #3a332a 0%, transparent 70%),
     var(--paper);
 }

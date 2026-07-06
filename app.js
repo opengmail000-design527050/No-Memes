@@ -1175,7 +1175,7 @@ renderChips();
   else updatePoints();
 })();
 
-const THEME_COLOR = { light: "#f8efdc", dark: "#2b2620" };
+const THEME_COLOR = { light: "#FAF3E5", dark: "#2b2620" };
 $("#themeToggle").onclick = () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
