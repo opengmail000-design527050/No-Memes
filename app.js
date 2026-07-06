@@ -89,7 +89,7 @@ const LS = {
 let config = LS.get("fpw_config", { clientId: "", clientSecret: "", base: "https://cn.fflogs.com" });
 const cache = LS.get("fpw_cache", {});
 for (const k of ["scans", "reports", "resolve", "servers", "last", "cleared"]) cache[k] ??= {};
-if (cache.v !== 4) { cache.scans = {}; cache.last = {}; cache.v = 4; }
+if (cache.v !== 5) { cache.scans = {}; cache.last = {}; cache.cleared = {}; cache.v = 5; }
 let history = LS.get("fpw_history", []);
 
 function saveCache() {
@@ -546,13 +546,18 @@ async function zoneProgress(name, server, zoneId) {
       { n: name, s: server })).characterData?.character || {};
 
     for (const g of unknown) {
-      let killed = false, firstMs = null, firstRank = null, specCount = {};
+      let killed = false, firstStart = null, firstMs = null, firstRank = null, specCount = {};
       for (const eid of g.eids) {
         const er = ch["e" + eid];
         if (!er) continue;
         if ((er.totalKills || 0) > 0) killed = true;
         for (const r of er.ranks || []) {
-          if (r.startTime != null && (firstMs == null || r.startTime < firstMs)) { firstMs = r.startTime; firstRank = r; }
+          // 取最早开打的那把（首通），但记它的击杀时刻=开打+时长，和"最近通关"用 endMs 同口径
+          if (r.startTime != null && (firstStart == null || r.startTime < firstStart)) {
+            firstStart = r.startTime;
+            firstMs = r.startTime + (r.duration || 0);
+            firstRank = r;
+          }
           const sp = r.spec || r.bestSpec;
           if (sp) specCount[sp] = (specCount[sp] || 0) + 1;
         }
