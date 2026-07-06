@@ -13,6 +13,7 @@ const WEEK_MS = 7 * DAY_MS;
 const CST_OFFSET_MS = 8 * 3600 * 1000;
 const REPORT_SCAN_GRACE_MS = 12 * 3600 * 1000; // 覆盖跨 7 天边界的长报告
 const LAST_TTL = 15 * 60 * 1000;         // 同角色同副本 15 分钟内直接复用结果，零请求
+const REPORT_PROBE_TTL = 40 * 1000;      // 命中结果缓存时，最多 40 秒探测一次新上传报告
 const BATCH = 10;                        // 报告扫描别名批量大小（实测点数最优）
 
 // 副本选择（只绝本，FF Logs 国服完整名，新→旧）
@@ -482,6 +483,40 @@ async function characterReports(name, server, { zones, need, untilTs }) {
   return rows;
 }
 
+const latestReportStamp = rows => {
+  const r = rows[0];
+  return r ? `${r.code}|${r.ts || 0}` : "";
+};
+
+async function probeLatestReportStamp(name, server, zoneId) {
+  const { groups } = await encMeta();
+  const glist = groups.filter(g => g.zones.has(zoneId));
+  const targetZones = new Set(glist.flatMap(g => [...g.zones]));
+  if (!targetZones.size) return null;
+  const Q = `query($n:String!,$s:String!){
+    characterData{ character(name:$n,serverSlug:$s,serverRegion:"CN"){
+      recentReports(limit:10){ data{ code startTime zone{ id } } }}}}`;
+  const ch = (await gql(Q, { n: name, s: server })).characterData?.character;
+  const rows = (ch?.recentReports?.data || [])
+    .map(x => ({ code: x.code, zone: x.zone?.id, ts: x.startTime }))
+    .filter(r => targetZones.has(r.zone))
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return rows.length ? latestReportStamp(rows) : null;
+}
+
+async function canUseLastHit(lastHit, name, server, zoneId) {
+  if (!lastHit || Date.now() - lastHit.ts >= LAST_TTL) return false;
+  if (Date.now() - (lastHit.probeTs || 0) < REPORT_PROBE_TTL) return true;
+  try {
+    const stamp = await probeLatestReportStamp(name, server, zoneId);
+    lastHit.probeTs = Date.now();
+    return stamp == null || (lastHit.v.reportStamp != null && stamp === lastHit.v.reportStamp);
+  } catch {
+    lastHit.probeTs = Date.now();
+    return true;
+  }
+}
+
 /* ============ 查询编排 ============ */
 // 先判通关；通关→最近一周最远那把；未通关→扫最近 40 份找最远
 async function zoneProgress(name, server, zoneId) {
@@ -531,9 +566,10 @@ async function zoneProgress(name, server, zoneId) {
     need: needScan.length ? 40 : 1,
     untilTs: scanCutoff,
   });
-  if (list == null) return { rows: [], notFound: true };
+  if (list == null) return { rows: [], notFound: true, reportStamp: "" };
 
   const zoneRows = list.filter(r => targetZones.has(r.zone)).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const reportStamp = latestReportStamp(zoneRows);
   const scanSet = new Map();
   if (needScan.length) for (const r of zoneRows.slice(0, 40)) scanSet.set(r.code, r);
   for (const r of zoneRows) if ((r.ts || 0) >= scanCutoff) scanSet.set(r.code, r);
@@ -569,7 +605,7 @@ async function zoneProgress(name, server, zoneId) {
   }
 
   rows.sort((a, b) => (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1) || ((a.pull?.fp ?? 999) - (b.pull?.fp ?? 999)));
-  return { rows };
+  return { rows, reportStamp };
 }
 
 /* ============ UI ============ */
@@ -620,7 +656,7 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   if (pull?.job && JOB_ZH[pull.job]) metaParts.push(JOB_ZH[pull.job]);
   if (pull?.timeMs) metaParts.push(fmtCST(pull.timeMs));
   const badge = el("span", "status " + statusCls);
-  badge.appendChild(brushStroke(pull?.timeMs || 1, statusCls === "clear" ? null : "222,140,110"));
+  badge.appendChild(brushStroke(pull?.timeMs || 1, statusCls === "clear" ? null : "--brush-orange"));
   badge.appendChild(el("span", "badgeTxt", parts.join(" · ")));
   line.appendChild(badge);
   if (extraWhen) whenParts.push(extraWhen);
@@ -643,12 +679,12 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
 
 /* 头部徽章的笔刷底:上下平行、微微错开的两笔半透明水彩(交叠处自然加深),
    viewBox 拉伸铺满徽章,随文字长短自适应 */
-function brushStroke(seed, rgb) {
-  rgb = rgb || "88,214,141";
+function brushStroke(seed, brush) {
+  const prefix = brush || "--brush-green";
   const rnd = seededRand(seed);
   const svg = svgEl("svg", { class: "badgeBrush", viewBox: "0 0 120 30", preserveAspectRatio: "none", "aria-hidden": "true" });
-  svgEl("path", { d: wobPath(barPts(2, 3, 110, 16, 7, 6), 2.4, true, rnd), fill: `rgba(${rgb},.30)`, transform: "rotate(-.6 57 11)" }, svg);
-  svgEl("path", { d: wobPath(barPts(8, 12, 108, 15, 6, 5), 2.6, true, rnd), fill: `rgba(${rgb},.28)`, transform: "rotate(.8 62 20)" }, svg);
+  svgEl("path", { d: wobPath(barPts(2, 3, 110, 16, 7, 6), 2.4, true, rnd), fill: `var(${prefix}-1)`, transform: "rotate(-.6 57 11)" }, svg);
+  svgEl("path", { d: wobPath(barPts(8, 12, 108, 15, 6, 5), 2.6, true, rnd), fill: `var(${prefix}-2)`, transform: "rotate(.8 62 20)" }, svg);
   return svg;
 }
 
@@ -799,7 +835,7 @@ function wipeStrip(entries, W, H, rnd) {
   for (const s of segs) {
     const g = svgEl("g", { class: "wipeSegG" }, svg);
     const pts = barPts(s.x, 1, s.w, H - 2, Math.min(5, s.w * .3), Math.min(4, s.w * .25));
-    svgEl("path", { d: wobPath(pts, 1.1, true, rnd), fill: `rgba(126,101,166,${s.alpha.toFixed(2)})` }, g);
+    svgEl("path", { d: wobPath(pts, 1.1, true, rnd), fill: "var(--wipe-fill)", "fill-opacity": s.alpha.toFixed(2) }, g);
     svgEl("path", { d: wobPath(pts, .9, true, rnd), class: "segInk" }, g);
     const label = `P${s.p}×${s.n}`;
     const half = lw(s) / 2;
@@ -955,11 +991,11 @@ async function runQuery() {
     if (note) box.appendChild(el("div", "notice", "⚠ " + note));
     box.appendChild(el("div", "spin", "查询中"));
 
-    // 15 分钟内同角色同副本直接复用上次结果（零请求）
+    // 15 分钟内同角色同副本复用结果；命中缓存时每 40 秒轻量探测一次新报告
     const lk = `${norm(name + "@" + server)}|${currentZone}`;
     const lastHit = cache.last[lk];
     let res;
-    if (lastHit && Date.now() - lastHit.ts < LAST_TTL) res = lastHit.v;
+    if (await canUseLastHit(lastHit, name, server, currentZone)) res = lastHit.v;
     else {
       res = await zoneProgress(name, server, currentZone);
       cache.last[lk] = { ts: Date.now(), v: res };
@@ -1138,3 +1174,11 @@ renderChips();
   if (!hasAuth()) openSettings();
   else updatePoints();
 })();
+
+const THEME_COLOR = { light: "#f8efdc", dark: "#2b2620" };
+$("#themeToggle").onclick = () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.theme = next;
+  document.querySelector('meta[name="theme-color"]').content = THEME_COLOR[next];
+};

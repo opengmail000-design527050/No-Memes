@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="icons/favicon.png?v=2">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
+<script>document.documentElement.dataset.theme=localStorage.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')</script>
 <link rel="stylesheet" href="fonts/lxgwwenkaiscreen.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -21,6 +22,7 @@
       <h1>No进度欺诈</h1>
     </div>
   </div>
+  <button id="themeToggle" class="ghost themeToggle" title="切换外观"><span class="tw light">Light</span><span class="sep">/</span><span class="tw dark">Dark</span></button>
   <button id="settingsBtn" class="ghost" title="连接 FF Logs">登录 FF Logs</button>
 </header>
 

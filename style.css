@@ -23,6 +23,11 @@
   --wobble-b: 15px 225px 15px 255px / 255px 15px 225px 15px;
   /* 手绘断续墨线(替代机器虚线):笔画长短不一、带轻微起伏,repeat-x 平铺 */
   --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%236e644f' stroke-width='1.4' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
+  --brush-green-1: rgba(88, 214, 141, .30);
+  --brush-green-2: rgba(88, 214, 141, .28);
+  --brush-orange-1: rgba(222, 140, 110, .30);
+  --brush-orange-2: rgba(222, 140, 110, .28);
+  --wipe-fill: rgb(126, 101, 166);
 }
 
 * { box-sizing: border-box; }
@@ -712,10 +717,89 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
   .brandIcon { width: 46px; height: 46px; border-radius: 14px; }
   .brand h1 { font-size: 32px; }
   header { padding-top: 30px; }
+  button.ghost { font-size: 12px; padding: 6px 10px; }
+  .themeToggle .tw { font-size: 11px; }
+  html[data-theme="light"] .themeToggle .tw.light,
+  html[data-theme="dark"]  .themeToggle .tw.dark  { font-size: 14px; }
   .weekBars, .weekDays { gap: 6px; }
   .weekBar { height: 88px; }
   .weekTotal { white-space: normal; text-align: right; }
   .wipeTrack { max-width: 100%; }
   .party { grid-template-columns: repeat(2, minmax(0, 1fr)); }  /* 手机放不下 4 列,降为 2 列仍保持 T奶在前 */
   .card .status { white-space: normal; }  /* 长进度词条允许换行,笔刷会罩住整块 */
+}
+
+/* ---------- 主题切换按钮 ---------- */
+.themeToggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  border-radius: 12px 16px 13px 17px / 16px 12px 17px 13px;
+  letter-spacing: 0;
+  padding: 8px 14px;
+}
+.themeToggle .tw,
+.themeToggle .sep {
+  transition: font-size .18s ease, color .18s ease;
+}
+.themeToggle .tw { font-size: 12px; color: var(--ink-soft); }
+.themeToggle .sep { font-size: 12px; color: var(--ink-soft); }
+html[data-theme="light"] .themeToggle .tw.light,
+html[data-theme="dark"]  .themeToggle .tw.dark {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+header .brand { margin-right: auto; }
+header { gap: 10px; }
+
+/* ---------- 暗色模式 ---------- */
+html[data-theme="dark"] {
+  --paper: #2b2620;
+  --card: #352f27;
+  --ink: #e8e0d0;
+  --ink-soft: #a89a80;
+  --line: rgba(232, 224, 208, .8);
+  --line-soft: rgba(232, 224, 208, .45);
+  --gold: #e8c060;
+  --accent: #c97a5f;
+  --accent-soft: #e08a6b;
+  --heal: #6a9a52;
+  --week-fill: rgba(200, 185, 225, .42);
+  --week-fill-hover: rgba(200, 185, 225, .56);
+  --week-ink: rgba(210, 195, 235, .88);
+  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%23a89a80' stroke-width='1.4' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
+  --brush-green-1: rgba(110, 220, 165, .34);
+  --brush-green-2: rgba(110, 220, 165, .32);
+  --brush-orange-1: rgba(235, 155, 125, .34);
+  --brush-orange-2: rgba(235, 155, 125, .32);
+  --wipe-fill: rgb(155, 135, 195);
+}
+html[data-theme="dark"] ::selection { background: rgba(224, 138, 107, .28); }
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(280px 100px at 4% 10%, rgba(90, 110, 130, .28), transparent 70%),
+    radial-gradient(320px 110px at 96% 16%, rgba(90, 110, 130, .22), transparent 70%),
+    radial-gradient(1200px 600px at 50% -200px, #3a332a 0%, transparent 70%),
+    var(--paper);
+}
+html[data-theme="dark"] .sugg .item:hover { background-color: #3d362d; }
+html[data-theme="dark"] .charHead .clearBadge { color: #7fc99a; }
+html[data-theme="dark"] .card .status.clear { color: #7fc99a; }
+html[data-theme="dark"] .card .status.prog  { color: #d99277; }
+html[data-theme="dark"] .weekPaint .wash2 { fill: rgba(185, 165, 220, .38); }
+html[data-theme="dark"] .weekBar:hover .wash2,
+html[data-theme="dark"] .weekBar.on .wash2 { fill: rgba(185, 165, 220, .5); }
+html[data-theme="dark"] .weekBase path { stroke: rgba(232, 224, 208, .45); }
+html[data-theme="dark"] .wipeStrip .segInk { stroke: rgba(232, 224, 208, .5); }
+html[data-theme="dark"] .wipeStrip .segLead { stroke: rgba(232, 224, 208, .45); }
+html[data-theme="dark"] dialog::backdrop { background: rgba(0, 0, 0, .5); }
+html[data-theme="dark"] dialog .note code { background: #3d362d; }
+html[data-theme="dark"] dialog input { background: #2a2520; color: var(--ink); }
+html[data-theme="dark"] .member.tank { --wash: rgba(130, 165, 205, .26); }
+html[data-theme="dark"] .member.heal { --wash: rgba(140, 175, 125, .25); }
+html[data-theme="dark"] .member.dps  { --wash: rgba(205, 140, 118, .23); }
+html[data-theme="dark"] .member img {
+  mix-blend-mode: normal;
+  filter: saturate(.85) contrast(.96);
 }
