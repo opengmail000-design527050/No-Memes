@@ -1,20 +1,25 @@
 {
   "name": "No进度欺诈",
   "short_name": "No进度欺诈",
-  "start_url": "index.html",
+  "description": "基于 FF Logs 公开数据的最终幻想14绝本进度查询",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f8efdc",
-  "theme_color": "#f8efdc",
+  "background_color": "#FAF3E5",
+  "theme_color": "#FAF3E5",
+  "lang": "zh-CN",
   "icons": [
     {
       "src": "icons/app-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icons/app-icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

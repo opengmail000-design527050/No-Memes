@@ -138,6 +138,15 @@ async function login() {
   if (!crypto.subtle) { showMsg("登录需要 https 或 localhost 环境。", true); $("#settings").close(); return; }
   const verifier = randTok(), state = randTok();
   sessionStorage.setItem("fpw_pkce", JSON.stringify({ verifier, state }));
+  // 登录往返会丢掉 ?c=&z=，先暂存，回跳后恢复
+  try {
+    const keep = new URLSearchParams();
+    const raw = ($("#q")?.value || "").trim();
+    if (raw) keep.set("c", raw);
+    keep.set("z", String(currentZone));
+    const s = keep.toString();
+    if (s) sessionStorage.setItem("fpw_return_q", "?" + s);
+  } catch {}
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
   location.href = config.base + "/oauth/authorize?" + new URLSearchParams({
     client_id: OAUTH_CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: "code",
@@ -149,7 +158,9 @@ async function login() {
 async function handleOAuthCallback() {
   const q = new URLSearchParams(location.search);
   if (!q.get("code") && !q.get("error")) return;
-  window.history.replaceState(null, "", location.pathname);   // history 变量被本文件遮蔽，须走 window
+  const ret = sessionStorage.getItem("fpw_return_q") || "";
+  sessionStorage.removeItem("fpw_return_q");
+  window.history.replaceState(null, "", location.pathname + ret);   // history 变量被本文件遮蔽，须走 window
   let saved = null;
   try { saved = JSON.parse(sessionStorage.getItem("fpw_pkce") || "null"); } catch {}
   sessionStorage.removeItem("fpw_pkce");
@@ -417,13 +428,15 @@ function parseReport(rep, code, wname, wserver, meta) {
   return out;
 }
 
+// 返回 { results, fails }；fails = 网络/限流失败的报告数（空报告 ≠ 失败，不计入）
 async function scanReports(items, wname, wserver, meta) {
   const out = [], misses = [];
+  let fails = 0;
   for (const it of items) {
     const hit = cache.scans[`${it.code}|${wname}|${wserver}`];
     if (hit) out.push(hit.r); else misses.push(it);
   }
-  if (!misses.length) return out;
+  if (!misses.length) return { results: out, fails: 0 };
   const chunks = [];
   for (let i = 0; i < misses.length; i += BATCH) chunks.push(misses.slice(i, i + BATCH));
   const results = await Promise.all(chunks.map(async chunk => {
@@ -431,7 +444,10 @@ async function scanReports(items, wname, wserver, meta) {
     try {
       const rd = (await gql(`query{ reportData{ ${alias} }}`)).reportData || {};
       return chunk.map((it, i) => parseReport(rd["r" + i] || {}, it.code, wname, wserver, meta));
-    } catch { return chunk.map(() => null); }   // 整批失败：不缓存，当空处理
+    } catch {
+      fails += chunk.length;
+      return chunk.map(() => null);   // 整批失败：不缓存，当空处理
+    }
   }));
   chunks.forEach((chunk, ci) => chunk.forEach((it, i) => {
     const p = results[ci][i];
@@ -440,7 +456,7 @@ async function scanReports(items, wname, wserver, meta) {
       cache.scans[`${it.code}|${wname}|${wserver}`] = { ts: Date.now(), r: p };
     out.push(p);
   }));
-  return out;
+  return { results: out, fails };
 }
 
 // 翻角色报告列表（增量缓存 + 早停）。untilTs：保证列表至少覆盖到这个时间点（周最佳用）。
@@ -586,7 +602,7 @@ async function zoneProgress(name, server, zoneId) {
     need: needScan.length ? 40 : 1,
     untilTs: scanCutoff,
   });
-  if (list == null) return { rows: [], notFound: true, reportStamp: "" };
+  if (list == null) return { rows: [], notFound: true, reportStamp: "", scanFails: 0 };
 
   const zoneRows = list.filter(r => targetZones.has(r.zone)).sort((a, b) => (b.ts || 0) - (a.ts || 0));
   const reportStamp = latestReportStamp(zoneRows);
@@ -594,9 +610,12 @@ async function zoneProgress(name, server, zoneId) {
   if (needScan.length) for (const r of zoneRows.slice(0, 40)) scanSet.set(r.code, r);
   for (const r of zoneRows) if ((r.ts || 0) >= scanCutoff) scanSet.set(r.code, r);
 
-  const partials = scanSet.size
-    ? await scanReports([...scanSet.values()], norm(name), norm(server), await encMeta().then(m => m.meta))
-    : [];
+  let partials = [], scanFails = 0;
+  if (scanSet.size) {
+    const scanned = await scanReports([...scanSet.values()], norm(name), norm(server), await encMeta().then(m => m.meta));
+    partials = scanned.results;
+    scanFails = scanned.fails;
+  }
 
   const eidToGroup = {};
   for (const g of glist) for (const eid of g.eids) eidToGroup[eid] = g.name;
@@ -625,7 +644,7 @@ async function zoneProgress(name, server, zoneId) {
   }
 
   rows.sort((a, b) => (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1) || ((a.pull?.fp ?? 999) - (b.pull?.fp ?? 999)));
-  return { rows, reportStamp };
+  return { rows, reportStamp, scanFails };
 }
 
 /* ============ UI ============ */
@@ -644,10 +663,41 @@ function renderChips() {
   box.innerHTML = "";
   for (const z of ZONE_TABS) {
     const c = el("button", "chip" + (currentZone === z.id ? " on" : ""), z.label);
-    // 只改变选择，不触发查询——查询由「查询」按钮/回车/建议点击发起，已出的结果不动
-    c.onclick = () => { currentZone = z.id; renderChips(); };
+    c.type = "button";
+    // 已定位角色时切换副本自动查；走 cache.last（1h）+ stamp 探测，通常不烧大额点数
+    c.onclick = () => {
+      if (currentZone === z.id) return;
+      currentZone = z.id;
+      renderChips();
+      if (currentChar || ($("#q").value.includes("@") && $("#q").value.trim())) runQuery();
+      else writeUrl(null, null, currentZone);
+    };
     box.appendChild(c);
   }
+}
+
+/* ============ URL 深链 ?c=角色@服&z=zoneId（replaceState，不刷历史） ============ */
+function writeUrl(name, server, zone) {
+  try {
+    const p = new URLSearchParams();
+    if (name && server) p.set("c", `${name}@${server}`);
+    else {
+      const raw = ($("#q")?.value || "").trim();
+      if (raw.includes("@")) p.set("c", raw);
+    }
+    p.set("z", String(zone ?? currentZone));
+    const qs = p.toString();
+    const next = location.pathname + (qs ? "?" + qs : "");
+    if (next !== location.pathname + location.search) history.replaceState(null, "", next);
+  } catch { /* 文件协议等环境忽略 */ }
+}
+
+function readUrl() {
+  const p = new URLSearchParams(location.search);
+  const c = (p.get("c") || p.get("char") || "").trim();
+  const zRaw = p.get("z") || p.get("zone");
+  const z = zRaw != null && zRaw !== "" ? +zRaw : null;
+  return { c, z: Number.isFinite(z) ? z : null };
 }
 
 function memberChip(p) {
@@ -1021,8 +1071,13 @@ async function runQuery() {
       cache.last[lk] = { ts: Date.now(), v: res };
     }
     if (seq !== querySeq) return;
-    const { rows, notFound } = res;
+    const { rows, notFound, scanFails = 0 } = res;
     box.querySelector(".spin")?.remove();
+    writeUrl(name, server, currentZone);
+    if (scanFails > 0) {
+      box.appendChild(el("div", "notice warn",
+        `⚠ 有 ${scanFails} 份报告加载失败（限流或网络），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`));
+    }
     if (notFound || !rows.length) {
       box.appendChild(el("div", "msg", "FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。"));
     }
@@ -1061,7 +1116,11 @@ async function runQuery() {
   }
 }
 
-/* ---- 搜索建议：本地历史即时 + 完整名停顿探测 ---- */
+/* ---- 搜索建议：本地历史即时；远程全服探测极省点 ----
+ * 远程 31 服别名很贵 → 仅当：本地无命中、≥3 字、已登录、停顿 1.2s 才探一次；
+ * probeCache 10 分钟复用；有本地历史时完全不打远程（回车仍可全服正式查）。 */
+const SUGGEST_DEBOUNCE_MS = 1200;
+const SUGGEST_MIN_LEN = 3;
 let probeTimer = null, probeSeq = 0;
 function hideSugg() {
   clearTimeout(probeTimer);
@@ -1102,22 +1161,31 @@ function onInput() {
   const local = history.filter(h => norm(h.name).startsWith(nv))
     .map(h => ({ name: h.name, server: h.server }));
   renderSugg(local);
-  if (v.length < 2 || !hasAuth()) return;
+  // 有本地历史 → 不烧远程点；字太少 / 未登录也不探
+  if (local.length || v.length < SUGGEST_MIN_LEN || !hasAuth()) return;
   const seq = probeSeq;
   probeTimer = setTimeout(async () => {
-    renderSugg([...local, { dim: true, text: "全服搜索中…" }]);
+    const cached = probeCache.get(v);
+    const cacheFresh = cached && Date.now() - cached.ts < PROBE_CACHE_TTL;
+    if (!cacheFresh) renderSugg([...local, { dim: true, text: "全服搜索中…（耗点数，可直接回车）" }]);
     try {
       const r = await searchCharacter(v, 1);
-      if (seq !== probeSeq) return;   // 输入已变，丢弃
+      if (seq !== probeSeq) return;
       const remote = (r.hits || []).filter(h => h.lastTs > 0)
         .map(h => ({ name: h.name, server: h.server, when: h.lastTs ? fmtCST(h.lastTs).slice(0, 5) : "" }))
         .filter(h => !local.some(l => l.name === h.name && l.server === h.server));
-      renderSugg([...local, ...remote]);
+      if (!remote.length && !local.length)
+        renderSugg([{ dim: true, text: "暂无上传过 log 的同名角色 · 回车可再查" }]);
+      else renderSugg([...local, ...remote]);
       saveCache();
-    } catch {
-      if (seq === probeSeq) renderSugg(local);
+    } catch (e) {
+      if (seq !== probeSeq) return;
+      const tip = (e instanceof FFLogsError && /限流/.test(e.message))
+        ? "额度紧张，建议回车查询或稍后再试"
+        : "远程搜索失败，可直接回车查询";
+      renderSugg([...local, { dim: true, text: tip }]);
     }
-  }, 600);
+  }, SUGGEST_DEBOUNCE_MS);
 }
 
 function selectQueryTextSoon() {
@@ -1191,8 +1259,21 @@ renderChips();
 (async () => {
   await handleOAuthCallback();   // 授权回跳先落地，再决定弹不弹引导
   renderAuthUI();
+  // 深链：?c=角色@服&z=76 —— 有鉴权才自动查，避免未登录白烧一轮
+  const deep = readUrl();
+  if (deep.z && ZONE_TABS.some(t => t.id === deep.z)) {
+    currentZone = deep.z;
+    renderChips();
+  }
+  if (deep.c) $("#q").value = deep.c;
   if (!hasAuth()) openSettings();
-  else updatePoints();
+  else {
+    updatePoints();
+    if (deep.c) {
+      currentChar = null;
+      runQuery();
+    }
+  }
 })();
 
 const THEME_COLOR = { light: "#FAF3E5", dark: "#302F2E" };

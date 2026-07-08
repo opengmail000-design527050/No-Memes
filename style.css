@@ -617,6 +617,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .msg.err { color: var(--accent); }
 .notice { font-size: 14px; color: var(--ink-soft); margin: 4px 2px 12px; }
+.notice.warn { color: var(--accent); }
 
 .spin {
   margin: 34px auto;
