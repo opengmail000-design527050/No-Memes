@@ -1276,7 +1276,7 @@ renderChips();
   }
 })();
 
-const THEME_COLOR = { light: "#FAF3E5", dark: "#302F2E" };
+const THEME_COLOR = { light: "#FFFAFA", dark: "#302F2E" };
 $("#themeToggle").onclick = () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;

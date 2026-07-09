@@ -3,8 +3,9 @@
 /* ponytail: 插画(莫古力/城堡/云)是真实绘画素材,CSS 只用渐变意会;想要真插画需另备 PNG 素材 */
 
 :root {
-  --paper: #FAF3E5;
-  --card: #fdf8ea;
+  color-scheme: light;
+  --paper: #FFFAFA;
+  --card: #FEF8F8;
   --ink: #3a3226;
   --ink-soft: #6e644f;
   --line: rgba(58, 50, 38, .8);        /* 手绘描边 */
@@ -28,11 +29,40 @@
   --brush-orange-1: rgba(222, 140, 110, .30);
   --brush-orange-2: rgba(222, 140, 110, .28);
   --wipe-fill: rgb(126, 101, 166);
+  /* 手绘戳影 / 状态色 / 局部底 — 亮暗共用 token,暗色只改变量 */
+  --glow: #fdf6e4;
+  --glow-2: transparent;
+  --selection: rgba(217, 119, 87, .28);
+  --btn-fg: #fff;
+  --btn-edge: rgba(58, 50, 38, .5);
+  --status-clear: #337a55;
+  --status-prog: #a2553f;
+  --hover-wash: #FEE2E2;
+  --input-bg: #fff;
+  --code-bg: #f1e6cb;
+  --chip-on-bg: rgba(226, 131, 120, .16);
+  --week-wash2: rgba(160, 138, 200, .3);
+  --week-wash2-hover: rgba(160, 138, 200, .42);
+  --stroke-soft: rgba(58, 50, 38, .45);
+  --stroke-ink: rgba(58, 50, 38, .5);
+  --backdrop: rgba(58, 50, 38, .35);
+  --sh-sm: 2px 3px 0 rgba(58, 50, 38, .08);
+  --sh-md: 3px 4px 0 rgba(58, 50, 38, .10);
+  --sh-lg: 4px 6px 0 rgba(58, 50, 38, .08);
+  --sh-xl: 6px 8px 0 rgba(58, 50, 38, .15);
+  --sh-btn: 3px 4px 0 rgba(58, 50, 38, .12);
+  --sh-btn-press: 1px 1px 0 rgba(58, 50, 38, .12);
+  --sh-chip: 2px 3px 0 rgba(58, 50, 38, .07);
+  --sh-chip-press: 1px 1px 0 rgba(58, 50, 38, .07);
+  --icon-drop: drop-shadow(3px 4px 0 rgba(58, 50, 38, .12));
+  --member-blend: multiply;
+  --member-filter: saturate(.78) contrast(.94);
+  --member-opacity: .92;
 }
 
 * { box-sizing: border-box; }
 
-::selection { background: rgba(217, 119, 87, .28); }
+::selection { background: var(--selection); }
 
 button:focus-visible, #q:focus-visible {
   outline: 2px dashed var(--accent-soft);
@@ -45,9 +75,10 @@ body {
   overflow-x: hidden;
   font-family: var(--hand);
   color: var(--ink);
-  /* 水彩意象:中央暖光 */
+  /* 水彩意象:中央暖光(+暗色第二层脚光) */
   background:
-    radial-gradient(1200px 600px at 50% -200px, #fdf6e4 0%, transparent 70%),
+    radial-gradient(1200px 600px at 50% -200px, var(--glow) 0%, transparent 70%),
+    radial-gradient(800px 420px at 12% 110%, var(--glow-2) 0%, transparent 55%),
     var(--paper);
   background-attachment: fixed;
   display: flex;
@@ -75,7 +106,7 @@ header {
   height: 58px;
   flex: none;
   border-radius: 17px;
-  filter: drop-shadow(3px 4px 0 rgba(58, 50, 38, .12));
+  filter: var(--icon-drop);
   transform: rotate(-2deg);
 }
 .brand h1 {
@@ -104,7 +135,7 @@ main {
   border: 2px solid var(--line);
   border-radius: var(--wobble-a);
   outline: none;
-  box-shadow: 3px 4px 0 rgba(58, 50, 38, .08);
+  box-shadow: var(--sh-md);
   transition: border-color .15s;
 }
 #q:focus { border-color: var(--accent-soft); }
@@ -113,11 +144,11 @@ button {
   font-size: 17px;
   letter-spacing: .12em;
   padding: 11px 26px;
-  color: #fff;
+  color: var(--btn-fg);
   background: var(--accent-soft);
-  border: 2px solid rgba(58, 50, 38, .5);
+  border: 2px solid var(--btn-edge);
   border-radius: var(--wobble-b);
-  box-shadow: 3px 4px 0 rgba(58, 50, 38, .12);
+  box-shadow: var(--sh-btn);
   cursor: pointer;
   transform: rotate(-.5deg);
   transition: transform .15s ease, background .15s, color .15s, border-color .15s, box-shadow .15s;
@@ -128,7 +159,7 @@ button:hover {
 }
 button:active {
   transform: translate(2px, 3px);
-  box-shadow: 1px 1px 0 rgba(58, 50, 38, .12);
+  box-shadow: var(--sh-btn-press);
 }
 button.ghost {
   color: var(--ink);
@@ -137,7 +168,7 @@ button.ghost {
   border-radius: var(--wobble-a);
   font-size: 14px;
   padding: 8px 16px;
-  box-shadow: 2px 3px 0 rgba(58, 50, 38, .08);
+  box-shadow: var(--sh-sm);
 }
 button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); background: var(--card); }
 
@@ -149,7 +180,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   background: var(--card);
   border: 2px solid var(--line);
   border-radius: 22px 18px 20px 16px / 18px 21px 16px 19px;
-  box-shadow: 4px 6px 0 rgba(58, 50, 38, .1);
+  box-shadow: var(--sh-lg);
   z-index: 10;
   overflow: hidden;
   padding: 8px 0;
@@ -166,7 +197,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   background-position: left top;
 }
 .sugg .item:first-child { background-image: none; }
-.sugg .item:hover { background-color: #f4ead2; }
+.sugg .item:hover { background-color: var(--hover-wash); }
 .sugg .item .n { font-size: 17px; }
 .sugg .item .s { font-size: 13px; color: var(--ink-soft); }
 .sugg .item.dim { color: var(--ink-soft); cursor: default; font-size: 13px; justify-content: center; }
@@ -200,7 +231,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   background: var(--card);
   color: var(--ink);
   cursor: pointer;
-  box-shadow: 2px 3px 0 rgba(58, 50, 38, .07);
+  box-shadow: var(--sh-chip);
   --tilt: -.4deg;   /* 倾斜放变量里,免得 nth-child(even) 权重压掉 hover/active 的位移 */
   transform: rotate(var(--tilt));
 }
@@ -213,11 +244,11 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .chip:active {
   transform: rotate(var(--tilt)) translate(1px, 2px);
-  box-shadow: 1px 1px 0 rgba(58, 50, 38, .07);
+  box-shadow: var(--sh-chip-press);
 }
 .chip.on {
   color: var(--accent);
-  background: rgba(226, 131, 120, .16);
+  background: var(--chip-on-bg);
   border-color: var(--accent);
 }
 
@@ -238,7 +269,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   position: relative;
   font-size: 15px;
   padding: 4px 13px 5px;
-  color: #337a55;   /* 深绿常规,和卡片词条统一;粗体在笔刷上太喊叫 */
+  color: var(--status-clear);   /* 深绿常规,和卡片词条统一;粗体在笔刷上太喊叫 */
   text-decoration: none;
   white-space: nowrap;
 }
@@ -259,7 +290,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   border-radius: var(--wobble-b);
   padding: 20px 22px 18px;
   margin-bottom: 18px;
-  box-shadow: 4px 6px 0 rgba(58, 50, 38, .08);
+  box-shadow: var(--sh-lg);
   transform: rotate(-.15deg);
   animation: card-in .38s cubic-bezier(.2, .7, .3, 1) backwards;
 }
@@ -289,8 +320,8 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   padding: 3px 6px;
   white-space: nowrap;
 }
-.card .status.clear { color: #337a55; }
-.card .status.prog  { color: #a2553f; }   /* 橙笔刷配的深陶土,和深绿同明度 */
+.card .status.clear { color: var(--status-clear); }
+.card .status.prog  { color: var(--status-prog); }   /* 橙笔刷配的深陶土,和深绿同明度 */
 .card .status .badgeTxt { position: relative; }
 .card .status .badgeBrush {
   position: absolute;
@@ -380,7 +411,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .weekPaint path { vector-effect: non-scaling-stroke; }
 .weekPaint .wash1 { fill: var(--week-fill); transition: fill .16s ease; }
-.weekPaint .wash2 { fill: rgba(160, 138, 200, .3); transition: fill .16s ease; }
+.weekPaint .wash2 { fill: var(--week-wash2); transition: fill .16s ease; }
 .weekPaint .inkline {
   fill: none;
   stroke: var(--line);
@@ -393,7 +424,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   transform: rotate(var(--tilt)) translateY(-2px);
 }
 .weekBar:hover .wash1, .weekBar.on .wash1 { fill: var(--week-fill-hover); }
-.weekBar:hover .wash2, .weekBar.on .wash2 { fill: rgba(160, 138, 200, .42); }
+.weekBar:hover .wash2, .weekBar.on .wash2 { fill: var(--week-wash2-hover); }
 .weekBar.pop .weekPaint { animation: week-pop .3s ease; }
 @keyframes week-pop {
   0%   { transform: rotate(var(--tilt)) scale(1, 1); }
@@ -411,7 +442,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   background: var(--card);
   border: 2px solid var(--line);
   border-radius: 12px 15px 11px 14px / 14px 11px 15px 12px;
-  box-shadow: 3px 4px 0 rgba(58, 50, 38, .1);
+  box-shadow: var(--sh-md);
   font-size: 12px;
   white-space: nowrap;
   opacity: 0;
@@ -468,7 +499,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .weekBase path {
   fill: none;
-  stroke: rgba(58, 50, 38, .45);
+  stroke: var(--stroke-soft);
   stroke-width: 2;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
@@ -525,7 +556,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 .wipeStrip path { vector-effect: non-scaling-stroke; }
 .wipeStrip .segInk {
   fill: none;
-  stroke: rgba(58, 50, 38, .5);
+  stroke: var(--stroke-ink);
   stroke-width: 1.6;
   stroke-linejoin: round;
 }
@@ -537,7 +568,7 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .wipeStrip .segLead {
   fill: none;
-  stroke: rgba(58, 50, 38, .45);
+  stroke: var(--stroke-soft);
   stroke-width: 1.3;
   stroke-linecap: round;
 }
@@ -580,9 +611,9 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   border-radius: 5px;
   flex: none;
   display: block;
-  mix-blend-mode: multiply;
-  filter: saturate(.78) contrast(.94);
-  opacity: .92;
+  mix-blend-mode: var(--member-blend);
+  filter: var(--member-filter);
+  opacity: var(--member-opacity);
 }
 .member .mn {
   min-width: 0;
@@ -660,12 +691,12 @@ dialog {
   border-radius: var(--wobble-a);
   padding: 26px 28px;
   width: min(460px, 92vw);
-  box-shadow: 6px 8px 0 rgba(58, 50, 38, .15);
+  box-shadow: var(--sh-xl);
 }
-dialog::backdrop { background: rgba(58, 50, 38, .35); }
+dialog::backdrop { background: var(--backdrop); }
 dialog h2 { margin: 0 0 10px; font-size: 22px; letter-spacing: .06em; }
 dialog .note { font-size: 14px; color: var(--ink-soft); line-height: 1.7; margin: 0 0 16px; }
-dialog .note code { font-family: inherit; background: #f1e6cb; padding: 0 4px; border-radius: 4px; }
+dialog .note code { font-family: inherit; background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
 dialog a { color: var(--accent); }
 dialog label {
   display: block;
@@ -683,7 +714,8 @@ dialog input {
   padding: 8px 12px;
   border: 2px solid var(--line-soft);
   border-radius: 12px 16px 13px 17px / 16px 12px 17px 13px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--ink);
   outline: none;
 }
 dialog input:focus { border-color: var(--accent-soft); }
@@ -752,51 +784,69 @@ html[data-theme="dark"]  .themeToggle .tw.dark {
 header .brand { margin-right: auto; }
 header { gap: 10px; }
 
-/* ---------- 暗色模式 ---------- */
+/* ---------- 暗色模式:同一本奶油纸,灯调暗(不换品牌色) ----------
+   原则: 纸/墨只改明度; 陶土橙·金·紫水彩·笔刷 RGB 尽量沿用亮色。
+   不是「炭灰 UI / 牛皮纸」另一套主题。 */
 html[data-theme="dark"] {
+  color-scheme: dark;
+  /* 表面:背景用最初暗色定稿 #302F2E; card 略亮一档便于抬起 */
   --paper: #302F2E;
-  --card: #2C2B2A;
-  --ink: #e8e0d0;
+  --card: #3a3937;
+  /* 字色 ≈ 亮色的纸色; 软字 ≈ 亮色 ink-soft 提亮 */
+  --ink: #f3ecdf;
   --ink-soft: #a89a80;
-  --line: rgba(232, 224, 208, .8);
-  --line-soft: rgba(232, 224, 208, .45);
-  --gold: #e8c060;
-  --accent: #c97a5f;
-  --accent-soft: #e08a6b;
-  --heal: #6a9a52;
-  --week-fill: rgba(200, 185, 225, .42);
-  --week-fill-hover: rgba(200, 185, 225, .56);
-  --week-ink: rgba(210, 195, 235, .88);
-  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%23a89a80' stroke-width='1.4' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
-  --brush-green-1: rgba(110, 220, 165, .34);
-  --brush-green-2: rgba(110, 220, 165, .32);
-  --brush-orange-1: rgba(235, 155, 125, .34);
-  --brush-orange-2: rgba(235, 155, 125, .32);
-  --wipe-fill: rgb(155, 135, 195);
+  /* 描边用奶油色当「反相墨」,低对比像淡墨 */
+  --line: rgba(232, 224, 208, .42);
+  --line-soft: rgba(232, 224, 208, .22);
+  /* 颜料原样(或仅微提可读),气质靠它们延续 */
+  --gold: #e2b64c;
+  --accent: #cc6e64;
+  --accent-soft: #e28378;
+  --heal: #5d8f4a;
+  --week-fill: rgba(184, 167, 216, .34);
+  --week-fill-hover: rgba(184, 167, 216, .48);
+  --week-ink: rgba(198, 182, 228, .88);
+  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%23a89880' stroke-width='1.4' stroke-linecap='round' opacity='.5'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
+  /* 笔刷:亮色同款 RGB,略提 alpha 保证暗底可见 */
+  --brush-green-1: rgba(88, 214, 141, .32);
+  --brush-green-2: rgba(88, 214, 141, .30);
+  --brush-orange-1: rgba(222, 140, 110, .32);
+  --brush-orange-2: rgba(222, 140, 110, .30);
+  --wipe-fill: rgb(126, 101, 166);
+  /* 顶光回到最初暗色: #3a3938 暖灰,第二层关掉 */
+  --glow: #3a3938;
+  --glow-2: transparent;
+  --selection: rgba(217, 119, 87, .28);
+  --btn-fg: #faf3e5;
+  --btn-edge: rgba(58, 50, 38, .50);
+  /* 状态色 = 亮色同色相提亮,不改成薄荷绿/荧光 */
+  --status-clear: #4d8f68;
+  --status-prog: #c4785c;
+  --hover-wash: #444240;
+  --input-bg: #262524;
+  --code-bg: #3b3a38;
+  --chip-on-bg: rgba(226, 131, 120, .18);
+  --week-wash2: rgba(160, 138, 200, .28);
+  --week-wash2-hover: rgba(160, 138, 200, .40);
+  --stroke-soft: rgba(232, 224, 208, .32);
+  --stroke-ink: rgba(232, 224, 208, .38);
+  --backdrop: rgba(0, 0, 0, .5);
+  /* 戳影:暖墨褐,在原灰底上保持手绘厚度 */
+  --sh-sm: 2px 3px 0 rgba(0, 0, 0, .28);
+  --sh-md: 3px 4px 0 rgba(0, 0, 0, .32);
+  --sh-lg: 4px 6px 0 rgba(0, 0, 0, .30);
+  --sh-xl: 6px 8px 0 rgba(0, 0, 0, .40);
+  --sh-btn: 3px 4px 0 rgba(0, 0, 0, .35);
+  --sh-btn-press: 1px 1px 0 rgba(0, 0, 0, .35);
+  --sh-chip: 2px 3px 0 rgba(0, 0, 0, .26);
+  --sh-chip-press: 1px 1px 0 rgba(0, 0, 0, .26);
+  --icon-drop: drop-shadow(3px 4px 0 rgba(0, 0, 0, .35));
+  /* 职业图标:不能 multiply; 饱和度贴近亮色 multiply 后的观感 */
+  --member-blend: normal;
+  --member-filter: saturate(.82) brightness(1.05) contrast(.96);
+  --member-opacity: .9;
 }
-html[data-theme="dark"] ::selection { background: rgba(224, 138, 107, .28); }
-html[data-theme="dark"] body {
-  background:
-    radial-gradient(1200px 600px at 50% -200px, #3a3938 0%, transparent 70%),
-    var(--paper);
-}
-html[data-theme="dark"] .sugg .item:hover { background-color: #3b3a38; }
-html[data-theme="dark"] .charHead .clearBadge { color: #7fc99a; }
-html[data-theme="dark"] .card .status.clear { color: #7fc99a; }
-html[data-theme="dark"] .card .status.prog  { color: #d99277; }
-html[data-theme="dark"] .weekPaint .wash2 { fill: rgba(185, 165, 220, .38); }
-html[data-theme="dark"] .weekBar:hover .wash2,
-html[data-theme="dark"] .weekBar.on .wash2 { fill: rgba(185, 165, 220, .5); }
-html[data-theme="dark"] .weekBase path { stroke: rgba(232, 224, 208, .45); }
-html[data-theme="dark"] .wipeStrip .segInk { stroke: rgba(232, 224, 208, .5); }
-html[data-theme="dark"] .wipeStrip .segLead { stroke: rgba(232, 224, 208, .45); }
-html[data-theme="dark"] dialog::backdrop { background: rgba(0, 0, 0, .5); }
-html[data-theme="dark"] dialog .note code { background: #3b3a38; }
-html[data-theme="dark"] dialog input { background: #262524; color: var(--ink); }
-html[data-theme="dark"] .member.tank { --wash: rgba(130, 165, 205, .26); }
-html[data-theme="dark"] .member.heal { --wash: rgba(140, 175, 125, .25); }
-html[data-theme="dark"] .member.dps  { --wash: rgba(205, 140, 118, .23); }
-html[data-theme="dark"] .member img {
-  mix-blend-mode: normal;
-  filter: saturate(.85) contrast(.96);
-}
+/* 职能 wash:亮色同色相,略提 alpha */
+html[data-theme="dark"] .member.tank { --wash: rgba(110, 140, 176, .28); }
+html[data-theme="dark"] .member.heal { --wash: rgba(120, 150, 104, .26); }
+html[data-theme="dark"] .member.dps  { --wash: rgba(184, 116, 94, .24); }
