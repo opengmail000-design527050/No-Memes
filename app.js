@@ -619,11 +619,13 @@ async function zoneProgress(name, server, zoneId) {
 
   const eidToGroup = {};
   for (const g of glist) for (const eid of g.eids) eidToGroup[eid] = g.name;
-  const bestAll = {}, bestWeek = {}, weekPulls = {}, lastKill = {};
+  const bestAll = {}, bestWeek = {}, weekPulls = {}, lastKill = {}, scanKill = {};
   for (const p of partials) for (const [eid, cand] of Object.entries(p)) {
     const gname = eidToGroup[eid];
     if (!gname) continue;
     if (!bestAll[gname] || rankLess(cand.rank, bestAll[gname].rank)) bestAll[gname] = cand;
+    // rankings 被隐藏时兜底：报告里扫到的击杀（取扫描范围内最早那把）
+    if (cand.cleared && (!scanKill[gname] || cand.endMs < scanKill[gname].endMs)) scanKill[gname] = cand;
     if ((cand.endMs || cand.timeMs) >= cutoff) {
       if (!bestWeek[gname] || rankLess(cand.rank, bestWeek[gname].rank)) bestWeek[gname] = cand;
       if (cand.cleared && (!lastKill[gname] || cand.endMs > lastKill[gname].endMs)) lastKill[gname] = cand;
@@ -636,7 +638,20 @@ async function zoneProgress(name, server, zoneId) {
   const weekStats = {};
   for (const g of glist) weekStats[g.name] = buildWeekStat(dedupePulls(weekPulls[g.name] || []), now);
 
-  for (const g of needScan) rows.push({ group: g.name, cleared: false, pull: bestAll[g.name] || null, weekStat: weekStats[g.name] });
+  for (const g of needScan) {
+    const fk = scanKill[g.name];
+    if (fk) {
+      // rankings 隐藏但报告里有击杀 → 按已通关渲染。
+      // firstMs 留空:扫描只覆盖最近报告,最早那把不一定是真·首通,别谎报首通日期;
+      // 也不写 cache.cleared,对方哪天取消隐藏就能拿到真实首通定格。
+      rows.push({
+        group: g.name, cleared: true, firstMs: null, job: fk.job,
+        firstLink: `${config.base}/reports/${fk.code}#fight=${fk.fightId}`,
+      });
+    } else {
+      rows.push({ group: g.name, cleared: false, pull: bestAll[g.name] || null, weekStat: weekStats[g.name] });
+    }
+  }
   for (const row of rows) if (row.cleared) {
     row.weekPull = bestWeek[row.group] || null;
     row.weekKill = lastKill[row.group] || null;   // 近7天最新的那把通关（带小队/职业/log 链接）
