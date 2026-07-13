@@ -1,7 +1,7 @@
 /* No memes — 仅缓存本站静态资源，绝不代理 cn.fflogs.com（省点数 + 避免脏数据） */
 "use strict";
 
-const CACHE = "no-memes-static-v3";
+const CACHE = "no-memes-static-v4";
 const PRECACHE = [
   "./",
   "./index.html",

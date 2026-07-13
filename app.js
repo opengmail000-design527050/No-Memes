@@ -1029,15 +1029,22 @@ function weeklyChart(stat) {
   return wrap;
 }
 
+let lastPoints = null;   // 缓存上次额度数据，切换语言时按新语言重画（不重新请求，不烧点）
+function renderPoints() {
+  const r = lastPoints;
+  if (!r) return;
+  const mins = Math.ceil((r.pointsResetIn || 0) / 60);
+  const when = mins > 0 ? tr(`，${mins} 分钟后重置`, `, resets in ${mins} min`) : "";
+  $("#points").textContent = tr(`查询额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`,
+    `API points used ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour}${when}`);
+}
+
 async function updatePoints() {
   try {
     const d = await gql("{rateLimitData{ pointsSpentThisHour limitPerHour pointsResetIn }}");
-    const r = d.rateLimitData;
-    if (!r) return;
-    const mins = Math.ceil((r.pointsResetIn || 0) / 60);
-    const when = mins > 0 ? tr(`，${mins} 分钟后重置`, `, resets in ${mins} min`) : "";
-    $("#points").textContent = tr(`查询额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`,
-      `API points used ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour}${when}`);
+    if (!d.rateLimitData) return;
+    lastPoints = d.rateLimitData;
+    renderPoints();
   } catch { /* 点数显示是装饰，失败不打扰 */ }
 }
 
@@ -1332,6 +1339,7 @@ $("#langToggle").onclick = () => {
   applyStaticLang();
   renderChips();
   renderAuthUI();
+  renderPoints();
   if (lastRender) renderResultBox(lastRender.name, lastRender.server, lastRender.res, lastRender.note);
 };
 
