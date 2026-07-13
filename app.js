@@ -27,8 +27,10 @@ const ZONE_TABS = [
   { id: 19, label: "巴哈姆特绝境战", en: "The Unending Coil of Bahamut" },
 ];
 
-/* ============ 语言（zh 默认；en 用 FF Logs 英文站副本名） ============ */
-const LANG = localStorage.fpw_lang === "en" ? "en" : "zh";
+/* ============ 语言（zh 默认；en 用 FF Logs 英文站副本名） ============
+ * LANG 是 let 不是 const：切换语言时原地改它 + 重渲染，不刷新整页，
+ * 也就不会白白再发一次 rateLimitData/查询请求烧点数。 */
+let LANG = localStorage.fpw_lang === "en" ? "en" : "zh";
 const tr = (zh, en) => LANG === "en" ? en : zh;
 const zoneLabel = z => LANG === "en" ? z.en : z.label;
 const ENC_EN = Object.fromEntries(ZONE_TABS.map(z => [z.label, z.en]));
@@ -1051,6 +1053,52 @@ function pushHistory(name, server) {
   LS.set("fpw_history", history);
 }
 
+// 结果面板的纯渲染部分：从 res 数据出发画 DOM，不发任何请求。
+// 语言切换时用它对着已有数据重画一遍（换文案而已），避免为了换语言又白烧一次点数。
+let lastRender = null;   // { name, server, res, note }
+function renderResultBox(name, server, res, note) {
+  lastRender = { name, server, res, note };
+  const box = $("#result");
+  box.innerHTML = "";
+  const head = el("div", "charHead");
+  head.appendChild(el("span", "who", `${name} @ ${server}`));
+  const curTab = ZONE_TABS.find(z => z.id === currentZone);
+  head.appendChild(el("span", "meta", curTab ? zoneLabel(curTab) : ""));
+  box.appendChild(head);
+  if (note) box.appendChild(el("div", "notice", "⚠ " + note));
+
+  const { rows, notFound, scanFails = 0 } = res;
+  if (scanFails > 0) {
+    box.appendChild(el("div", "notice warn",
+      tr(`⚠ 有 ${scanFails} 份报告加载失败（限流或网络），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`,
+         `⚠ ${scanFails} report(s) failed to load (rate limit or network); results may be incomplete. Retry later — successfully cached reports won't cost points again.`)));
+  }
+  if (notFound || !rows.length) {
+    box.appendChild(el("div", "msg", tr("FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。",
+      "No records for this duty on FF Logs. Not found ≠ never played — maybe no logs were uploaded.")));
+  }
+  for (const row of rows) {
+    if (!row.cleared) {
+      if (row.pull) box.appendChild(pullCard(row.group, row.pull, progressText(row.pull), "prog", null, row.weekStat));
+      else box.appendChild(pullCard(row.group, null, tr("无记录", "No records"), "prog", null, row.weekStat));
+      continue;
+    }
+    if (!head.querySelector(".clearBadge")) head.appendChild(clearBadge(row));
+    if (row.weekKill) {
+      // 通关时刻=那把的 endMs（boss 倒下那一刻），不是 startMs（那把开始时间）
+      box.appendChild(pullCard(row.group, { ...row.weekKill, timeMs: row.weekKill.endMs },
+        tr("最近通关", "Latest clear"), "clear",
+        tr(`近7天过本${row.weekStat?.kills || 1}次`, `${row.weekStat?.kills || 1} clear(s) in last 7 days`), row.weekStat));
+    } else if (row.weekPull) {
+      box.appendChild(pullCard(row.group, row.weekPull,
+        tr("近7天" + progressText(row.weekPull), "Last 7 days: " + progressText(row.weekPull)), "clear", null, row.weekStat));
+    } else {
+      box.appendChild(pullCard(row.group, null, tr("近7天无记录", "No pulls in last 7 days"), "clear", null,
+        row.weekStat?.pulls ? row.weekStat : null));
+    }
+  }
+}
+
 let querySeq = 0;
 let selectQueryOnFocus = false;
 async function runQuery() {
@@ -1084,12 +1132,6 @@ async function runQuery() {
     }
 
     box.innerHTML = "";
-    const head = el("div", "charHead");
-    head.appendChild(el("span", "who", `${name} @ ${server}`));
-    const curTab = ZONE_TABS.find(z => z.id === currentZone);
-    head.appendChild(el("span", "meta", curTab ? zoneLabel(curTab) : ""));
-    box.appendChild(head);
-    if (note) box.appendChild(el("div", "notice", "⚠ " + note));
     box.appendChild(el("div", "spin", tr("查询中", "Searching")));
 
     // 15 分钟内同角色同副本复用结果；命中缓存时每 40 秒轻量探测一次新报告
@@ -1102,38 +1144,8 @@ async function runQuery() {
       cache.last[lk] = { ts: Date.now(), v: res };
     }
     if (seq !== querySeq) return;
-    const { rows, notFound, scanFails = 0 } = res;
-    box.querySelector(".spin")?.remove();
     writeUrl(name, server, currentZone);
-    if (scanFails > 0) {
-      box.appendChild(el("div", "notice warn",
-        tr(`⚠ 有 ${scanFails} 份报告加载失败（限流或网络），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`,
-           `⚠ ${scanFails} report(s) failed to load (rate limit or network); results may be incomplete. Retry later — successfully cached reports won't cost points again.`)));
-    }
-    if (notFound || !rows.length) {
-      box.appendChild(el("div", "msg", tr("FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。",
-        "No records for this duty on FF Logs. Not found ≠ never played — maybe no logs were uploaded.")));
-    }
-    for (const row of rows) {
-      if (!row.cleared) {
-        if (row.pull) box.appendChild(pullCard(row.group, row.pull, progressText(row.pull), "prog", null, row.weekStat));
-        else box.appendChild(pullCard(row.group, null, tr("无记录", "No records"), "prog", null, row.weekStat));
-        continue;
-      }
-      if (!head.querySelector(".clearBadge")) head.appendChild(clearBadge(row));
-      if (row.weekKill) {
-        // 通关时刻=那把的 endMs（boss 倒下那一刻），不是 startMs（那把开始时间）
-        box.appendChild(pullCard(row.group, { ...row.weekKill, timeMs: row.weekKill.endMs },
-          tr("最近通关", "Latest clear"), "clear",
-          tr(`近7天过本${row.weekStat?.kills || 1}次`, `${row.weekStat?.kills || 1} clear(s) in last 7 days`), row.weekStat));
-      } else if (row.weekPull) {
-        box.appendChild(pullCard(row.group, row.weekPull,
-          tr("近7天" + progressText(row.weekPull), "Last 7 days: " + progressText(row.weekPull)), "clear", null, row.weekStat));
-      } else {
-        box.appendChild(pullCard(row.group, null, tr("近7天无记录", "No pulls in last 7 days"), "clear", null,
-          row.weekStat?.pulls ? row.weekStat : null));
-      }
-    }
+    renderResultBox(name, server, res, note);
     updatePoints();
   } catch (e) {
     if (seq !== querySeq) return; // 已被新查询取代，别用旧错误盖掉新结果
@@ -1284,31 +1296,44 @@ $("#settings").addEventListener("close", () => {
   updatePoints();
 });
 
-/* ---- 语言切换 + 英文版静态文案（HTML 以中文为源，en 时 JS 覆写） ---- */
-$("#langToggle").textContent = tr("中/英", "Chinese/English");
-$("#langToggle").title = tr("切换语言", "Switch language");
-$("#langToggle").onclick = () => {
-  localStorage.fpw_lang = LANG === "en" ? "zh" : "en";
-  location.reload();   // ponytail: 状态全在 URL/缓存里，整页重载最省事
-};
-if (LANG === "en") {
-  document.documentElement.lang = "en";
-  $("#themeToggle").title = "Toggle appearance";
-  $("#settingsBtn").title = "Connect FF Logs";
-  $("#q").placeholder = "Character, or Character@Server";
-  $("#go").textContent = "Search";
-  document.querySelector(".searchHint").textContent =
-    "Based on public FF Logs data — only uploaded logs show up. Not found ≠ never played";
-  $("#settings h2").textContent = "Connect FF Logs";
-  $("#advBox summary").textContent = "Use your own API client (advanced)";
-  $("#advBox .note").innerHTML =
+/* ---- 语言切换：原地重渲染，不刷新整页 ----
+ * HTML 源文案是中文；applyStaticLang() 双向覆写（不像之前只在 en 分支覆写一次），
+ * 这样切回 zh 也能原样还原，不需要 location.reload()。 */
+function applyStaticLang() {
+  document.documentElement.dataset.lang = LANG;
+  document.documentElement.lang = LANG === "en" ? "en" : "zh-CN";
+  $("#langToggle").querySelector(".tw.zh").textContent = tr("中", "Chinese");
+  $("#langToggle").querySelector(".tw.en").textContent = tr("英", "English");
+  $("#langToggle").title = tr("切换语言", "Switch language");
+  $("#themeToggle").title = tr("切换外观", "Toggle appearance");
+  $("#settingsBtn").title = tr("连接 FF Logs", "Connect FF Logs");
+  $("#q").placeholder = tr("角色名，或 角色名@服务器", "Character, or Character@Server");
+  $("#go").textContent = tr("查询", "Search");
+  document.querySelector(".searchHint").textContent = tr(
+    "基于 FF Logs 的公开数据，上传了才能查到。查不到不等于没打",
+    "Based on public FF Logs data — only uploaded logs show up. Not found ≠ never played");
+  $("#settings h2").textContent = tr("连接 FF Logs", "Connect FF Logs");
+  $("#advBox summary").textContent = tr("使用自己的 API Client（高级）", "Use your own API client (advanced)");
+  $("#advBox .note").innerHTML = tr(
+    '在 <a href="https://cn.fflogs.com/api/clients/" target="_blank" rel="noopener">cn.fflogs.com/api/clients</a> ' +
+    '创建一个 Client（名字随意，Redirect URL 填 <code>https://localhost</code> 即可）， ' +
+    '把 Client ID 和 Client Secret 粘贴到这里然后点击保存。凭据只存在你自己的浏览器里。',
     'Create a client at <a href="https://cn.fflogs.com/api/clients/" target="_blank" rel="noopener">cn.fflogs.com/api/clients</a> ' +
     '(any name; set Redirect URL to <code>https://localhost</code>), then paste the Client ID and Client Secret here and hit Save. ' +
-    'Credentials are stored only in your own browser.';
-  $("#cfgBase").parentElement.firstChild.nodeValue = "FF Logs site";
-  $("#cfgSave").textContent = "Save";
-  document.querySelector('#settings button[value="cancel"]').textContent = "Close";
+    'Credentials are stored only in your own browser.');
+  $("#cfgBase").parentElement.firstChild.nodeValue = tr("FF Logs 站点", "FF Logs site");
+  $("#cfgSave").textContent = tr("保存", "Save");
+  document.querySelector('#settings button[value="cancel"]').textContent = tr("关闭", "Close");
 }
+applyStaticLang();
+$("#langToggle").onclick = () => {
+  LANG = LANG === "en" ? "zh" : "en";
+  localStorage.fpw_lang = LANG;
+  applyStaticLang();
+  renderChips();
+  renderAuthUI();
+  if (lastRender) renderResultBox(lastRender.name, lastRender.server, lastRender.res, lastRender.note);
+};
 
 /* ---- 绑定 ---- */
 $("#settingsBtn").onclick = openSettings;

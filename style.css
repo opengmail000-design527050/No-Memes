@@ -732,7 +732,9 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
   button.ghost { font-size: 12px; padding: 6px 10px; }
   .themeToggle .tw { font-size: 11px; }
   html[data-theme="light"] .themeToggle .tw.light,
-  html[data-theme="dark"]  .themeToggle .tw.dark  { font-size: 14px; }
+  html[data-theme="dark"]  .themeToggle .tw.dark,
+  html[data-lang="zh"] .themeToggle .tw.zh,
+  html[data-lang="en"] .themeToggle .tw.en { font-size: 14px; }
   .weekBars, .weekDays { gap: 6px; }
   .weekBar { height: 88px; }
   .weekTotal { white-space: normal; text-align: right; }
@@ -757,7 +759,9 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
 .themeToggle .tw { font-size: 12px; color: var(--ink-soft); }
 .themeToggle .sep { font-size: 12px; color: var(--ink-soft); }
 html[data-theme="light"] .themeToggle .tw.light,
-html[data-theme="dark"]  .themeToggle .tw.dark {
+html[data-theme="dark"]  .themeToggle .tw.dark,
+html[data-lang="zh"] .themeToggle .tw.zh,
+html[data-lang="en"] .themeToggle .tw.en {
   font-size: 16px;
   font-weight: 700;
   color: var(--accent-soft);
