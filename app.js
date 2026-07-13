@@ -18,14 +18,22 @@ const BATCH = 10;                        // 报告扫描别名批量大小（实
 
 // 副本选择（只绝本，FF Logs 国服完整名，新→旧）
 const ZONE_TABS = [
-  { id: 76, label: "妖星乱舞绝境战" },
-  { id: 65, label: "光暗未来绝境战" },
-  { id: 53, label: "欧米茄绝境验证战" },
-  { id: 45, label: "幻想龙诗绝境战" },
-  { id: 32, label: "亚历山大绝境战" },
-  { id: 23, label: "究极神兵绝境战" },
-  { id: 19, label: "巴哈姆特绝境战" },
+  { id: 76, label: "妖星乱舞绝境战", en: "Dancing Mad" },
+  { id: 65, label: "光暗未来绝境战", en: "Futures Rewritten" },
+  { id: 53, label: "欧米茄绝境验证战", en: "The Omega Protocol" },
+  { id: 45, label: "幻想龙诗绝境战", en: "Dragonsong's Reprise" },
+  { id: 32, label: "亚历山大绝境战", en: "The Epic of Alexander" },
+  { id: 23, label: "究极神兵绝境战", en: "The Weapon's Refrain" },
+  { id: 19, label: "巴哈姆特绝境战", en: "The Unending Coil of Bahamut" },
 ];
+
+/* ============ 语言（zh 默认；en 用 FF Logs 英文站副本名） ============ */
+const LANG = localStorage.fpw_lang === "en" ? "en" : "zh";
+const tr = (zh, en) => LANG === "en" ? en : zh;
+const zoneLabel = z => LANG === "en" ? z.en : z.label;
+const ENC_EN = Object.fromEntries(ZONE_TABS.map(z => [z.label, z.en]));
+const encName = n => LANG === "en" ? (ENC_EN[n] || n) : n;   // API 返回国服名，查表转英文，查不到原样透传
+const jobName = j => !j ? "" : LANG === "en" ? j.replace(/([a-z])([A-Z])/g, "$1 $2") : (JOB_ZH[j] || j);
 
 const JOB_ZH = {
   Paladin: "骑士", Warrior: "战士", DarkKnight: "暗黑骑士", Gunbreaker: "绝枪战士",
@@ -130,12 +138,12 @@ async function oauthToken(params) {
     method: "POST",
     body: new URLSearchParams({ client_id: OAUTH_CLIENT_ID, ...params }),
   });
-  if (!r.ok) throw new FFLogsError(`FF Logs 授权失败（HTTP ${r.status}）`);
+  if (!r.ok) throw new FFLogsError(tr(`FF Logs 授权失败（HTTP ${r.status}）`, `FF Logs authorization failed (HTTP ${r.status})`));
   return r.json();
 }
 
 async function login() {
-  if (!crypto.subtle) { showMsg("登录需要 https 或 localhost 环境。", true); $("#settings").close(); return; }
+  if (!crypto.subtle) { showMsg(tr("登录需要 https 或 localhost 环境。", "Login requires https or localhost."), true); $("#settings").close(); return; }
   const verifier = randTok(), state = randTok();
   sessionStorage.setItem("fpw_pkce", JSON.stringify({ verifier, state }));
   // 登录往返会丢掉 ?c=&z=，先暂存，回跳后恢复
@@ -164,8 +172,8 @@ async function handleOAuthCallback() {
   let saved = null;
   try { saved = JSON.parse(sessionStorage.getItem("fpw_pkce") || "null"); } catch {}
   sessionStorage.removeItem("fpw_pkce");
-  if (q.get("error")) { showMsg(`FF Logs 授权未完成（${q.get("error")}）。`, true); return; }
-  if (!saved || saved.state !== q.get("state")) { showMsg("登录校验失败（state 不匹配），请重新登录。", true); return; }
+  if (q.get("error")) { showMsg(tr(`FF Logs 授权未完成（${q.get("error")}）。`, `FF Logs authorization not completed (${q.get("error")}).`), true); return; }
+  if (!saved || saved.state !== q.get("state")) { showMsg(tr("登录校验失败（state 不匹配），请重新登录。", "Login validation failed (state mismatch), please log in again."), true); return; }
   try {
     const p = await oauthToken({
       grant_type: "authorization_code", redirect_uri: REDIRECT_URI,
@@ -174,7 +182,7 @@ async function handleOAuthCallback() {
     saveUser({ token: p.access_token, refresh: p.refresh_token || null, exp: Date.now() + (p.expires_in || 3600) * 1000, base: config.base, name: null });
     await fetchUserInfo();
   } catch (e) {
-    showMsg("FF Logs 登录失败：" + e.message, true);
+    showMsg(tr("FF Logs 登录失败：", "FF Logs login failed: ") + e.message, true);
   }
 }
 
@@ -221,7 +229,7 @@ async function ensureAuth() {
     client_secret: config.clientSecret,
   });
   const r = await fetch(config.base + "/oauth/token", { method: "POST", body });
-  if (!r.ok) throw new FFLogsError(`OAuth 失败（HTTP ${r.status}）——检查 Client ID / Secret 是否正确`);
+  if (!r.ok) throw new FFLogsError(tr(`OAuth 失败（HTTP ${r.status}）——检查 Client ID / Secret 是否正确`, `OAuth failed (HTTP ${r.status}) — check your Client ID / Secret`));
   const p = await r.json();
   LS.set("fpw_token", { token: p.access_token, exp: Date.now() + (p.expires_in || 3600) * 1000, base: config.base, id: config.clientId });
   return { token: p.access_token, ep: "/api/v2/client", user: false };
@@ -242,10 +250,12 @@ async function gql(query, variables) {
         throw new FFLogsError("NEED_LOGIN");
       }
       localStorage.removeItem("fpw_token");
-      throw new FFLogsError("凭据失效，请重新保存 API 设置");
+      throw new FFLogsError(tr("凭据失效，请重新保存 API 设置", "Credentials expired — re-save your API settings"));
     }
-    if (r.status === 429) throw new FFLogsError(auth.user ? "FF Logs 限流（你的账号本小时点数用完），稍后再试" : "FF Logs 限流（本小时点数用完），稍后再试");
-    if (!r.ok) throw new FFLogsError(`FF Logs 请求失败（HTTP ${r.status}）`);
+    if (r.status === 429) throw new FFLogsError(auth.user
+      ? tr("FF Logs 限流（你的账号本小时点数用完），稍后再试", "FF Logs rate limited (your account's hourly points are used up), try again later")
+      : tr("FF Logs 限流（本小时点数用完），稍后再试", "FF Logs rate limited (hourly points used up), try again later"));
+    if (!r.ok) throw new FFLogsError(tr(`FF Logs 请求失败（HTTP ${r.status}）`, `FF Logs request failed (HTTP ${r.status})`));
     const data = await r.json();
     // 批量别名查询（31 服探测等）里个别字段出错（如隐藏角色）不拖垮整次请求：有部分数据就用部分数据
     if (data.errors && !data.data) throw new FFLogsError("GraphQL: " + data.errors.map(e => e.message).join("; "));
@@ -293,7 +303,7 @@ async function cnServers() {
   if (hit && Date.now() - hit.ts < 30 * 86400 * 1000) return hit.v;
   const regs = (await gql("{worldData{regions{id slug}}}")).worldData?.regions || [];
   const rid = regs.find(r => r.slug === "CN")?.id;
-  if (rid == null) throw new FFLogsError("FF Logs 上没有 CN 大区");
+  if (rid == null) throw new FFLogsError(tr("FF Logs 上没有 CN 大区", "No CN region on FF Logs"));
   const d = await gql("query($id:Int!){worldData{region(id:$id){subregions{servers(limit:100){data{name}}}}}}", { id: rid });
   const names = (d.worldData?.region?.subregions || []).flatMap(s => (s.servers?.data || []).map(x => x.name));
   if (names.length) cache.servers.CN = { ts: Date.now(), v: names };
@@ -340,7 +350,8 @@ async function searchCharacter(name, maxCands = 4) {
   const best = active[0];
   const others = active.slice(1).filter(h => normset.has(norm(h.name))).map(h => h.server);
   const note = others.length
-    ? `已自动定位到最近活跃的 ${best.server}；${others.join("、")} 也有同名角色，查错了请用「角色名@服务器」精确指定。`
+    ? tr(`已自动定位到最近活跃的 ${best.server}；${others.join("、")} 也有同名角色，查错了请用「角色名@服务器」精确指定。`,
+         `Auto-picked ${best.server} (most recently active); the same name also exists on ${others.join(", ")}. If that's wrong, use "Name@Server".`)
     : null;
   return { name: best.name, server: best.server, note, hits: active };
 }
@@ -545,7 +556,7 @@ async function canUseLastHit(lastHit, name, server, zoneId) {
 async function zoneProgress(name, server, zoneId) {
   const { groups } = await encMeta();
   const glist = groups.filter(g => g.zones.has(zoneId));
-  if (!glist.length) throw new FFLogsError("这个副本没有 encounter 数据");
+  if (!glist.length) throw new FFLogsError(tr("这个副本没有 encounter 数据", "No encounter data for this duty"));
 
   // ① 通关判定：通关是不可逆的历史事实（首通时间/链接/职业定格），确认过一次就永久缓存，
   //    只对还没确认通关的 boss 发 encounterRankings；全通角色这一步零请求
@@ -677,7 +688,7 @@ function renderChips() {
   const box = $("#chips");
   box.innerHTML = "";
   for (const z of ZONE_TABS) {
-    const c = el("button", "chip" + (currentZone === z.id ? " on" : ""), z.label);
+    const c = el("button", "chip" + (currentZone === z.id ? " on" : ""), zoneLabel(z));
     c.type = "button";
     // 已定位角色时切换副本自动查；走 cache.last（1h）+ stamp 探测，通常不烧大额点数
     c.onclick = () => {
@@ -720,7 +731,7 @@ function memberChip(p) {
   const img = el("img");
   img.src = `icons/${p.job}.png`;
   img.alt = p.job || "";
-  img.title = JOB_ZH[p.job] || p.job || "";
+  img.title = jobName(p.job);
   img.onerror = () => img.remove();
   d.appendChild(img);
   const n = el("span", "mn");
@@ -733,12 +744,12 @@ function memberChip(p) {
 function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   const card = el("div", "card");
   const line = el("div", "bossline");
-  line.appendChild(el("span", "boss", title));
+  line.appendChild(el("span", "boss", encName(title)));
   // 进度类只刷主文案；近7天真实击杀保留“最近通关 · 职业 · 时间”整条笔刷。
   const parts = [statusText];
   const whenParts = [];
   const metaParts = pull?.cleared && statusCls === "clear" ? parts : whenParts;
-  if (pull?.job && JOB_ZH[pull.job]) metaParts.push(JOB_ZH[pull.job]);
+  if (pull?.job) metaParts.push(jobName(pull.job));
   if (pull?.timeMs) metaParts.push(fmtCST(pull.timeMs));
   const badge = el("span", "status " + statusCls);
   badge.appendChild(brushStroke(pull?.timeMs || 1, statusCls === "clear" ? null : "--brush-orange"));
@@ -747,7 +758,7 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   if (extraWhen) whenParts.push(extraWhen);
   if (whenParts.length) line.appendChild(el("span", "when", whenParts.join(" · ")));
   if (pull?.code) {
-    const a = el("a", "logLink", "查看 log ↗");
+    const a = el("a", "logLink", tr("查看 log ↗", "View log ↗"));
     a.href = `${config.base}/reports/${pull.code}#fight=${pull.fightId}`;
     a.target = "_blank"; a.rel = "noopener";
     line.appendChild(a);
@@ -784,14 +795,14 @@ function clearBadge(row) {
     date = y === new Date(Date.now() + CST_OFFSET_MS).getUTCFullYear() ? md : `${y}-${md}`;
   }
   a.appendChild(brushStroke(row.firstMs || 1));
-  a.appendChild(el("span", "badgeTxt", ["已通关", JOB_ZH[row.job], date].filter(Boolean).join(" · ")));
+  a.appendChild(el("span", "badgeTxt", [tr("已通关", "Cleared"), jobName(row.job), date].filter(Boolean).join(" · ")));
   return a;
 }
 
 function progressText(pull) {
-  const p = pull.phase ? `P${pull.phase}` : "未知阶段";
-  const hp = pull.hp == null ? "未知" : pull.hp + "%";
-  return pull.cleared ? "击杀" : `最远 ${p}（boss 剩 ${hp}）`;
+  const p = pull.phase ? `P${pull.phase}` : tr("未知阶段", "unknown phase");
+  const hp = pull.hp == null ? tr("未知", "unknown") : pull.hp + "%";
+  return pull.cleared ? tr("击杀", "Kill") : tr(`最远 ${p}（boss 剩 ${hp}）`, `best ${p} (boss at ${hp})`);
 }
 
 function dedupePulls(pulls) {
@@ -832,9 +843,9 @@ function buildWeekStat(pulls, now) {
 
 function durationText(ms) {
   const mins = Math.round(ms / 60000);
-  if (mins < 60) return `${mins} 分钟`;
+  if (mins < 60) return `${mins} ${tr("分钟", "min")}`;
   const hours = mins / 60;
-  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} 小时`;
+  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} ${tr("小时", "h")}`;
 }
 
 function phaseEntries(wipes, limit) {
@@ -847,7 +858,7 @@ function phaseEntries(wipes, limit) {
 
 function phaseText(wipes, limit) {
   const entries = phaseEntries(wipes, limit);
-  return entries.length ? entries.map(([p, n]) => `P${p}×${n}`).join(" · ") : "无灭点记录";
+  return entries.length ? entries.map(([p, n]) => `P${p}×${n}`).join(" · ") : tr("无灭点记录", "no wipe data");
 }
 
 /* —— 手绘工具:种子随机 + 平滑抖动路径(贝塞尔过中点,无棱角) —— */
@@ -942,10 +953,10 @@ function wipeDistribution(stat) {
   const entries = phaseEntries(stat.wipes);
   if (!entries.length) return null;
   const row = el("div", "wipeDist");
-  row.appendChild(el("span", "wipeLabel", "灭点分布"));
+  row.appendChild(el("span", "wipeLabel", tr("灭点分布", "Wipes by phase")));
   const track = el("button", "wipeTrack");
   track.type = "button";
-  track.setAttribute("aria-label", "灭点分布:" + phaseText(stat.wipes));
+  track.setAttribute("aria-label", tr("灭点分布:", "Wipes by phase: ") + phaseText(stat.wipes));
   track.appendChild(wipeStrip(entries, 250, 18, seededRand(stat.ms + stat.pulls)));
   track.onclick = e => {
     const g = e.target.closest(".wipeSegG");
@@ -961,8 +972,8 @@ function wipeDistribution(stat) {
 function weeklyChart(stat) {
   const wrap = el("div", "weekStat");
   const head = el("div", "weekHead");
-  head.appendChild(el("span", "weekTitle", "近7天战斗时长"));
-  head.appendChild(el("span", "weekTotal", `${stat.pulls} 把 · ${durationText(stat.ms)}`));
+  head.appendChild(el("span", "weekTitle", tr("近7天战斗时长", "Combat time, last 7 days")));
+  head.appendChild(el("span", "weekTotal", `${stat.pulls} ${tr("把", "pulls")} · ${durationText(stat.ms)}`));
   wrap.appendChild(head);
 
   const max = Math.max(...stat.days.map(d => d.ms), 1);
@@ -974,7 +985,8 @@ function weeklyChart(stat) {
     bar.type = "button";
     bar.style.setProperty("--h", `${d.ms ? Math.max(8, d.ms / max * 100) : 3}%`);
     bar.style.setProperty("--tilt", `${(rnd() * 1.2).toFixed(2)}deg`);
-    bar.setAttribute("aria-label", `${d.label}，${d.pulls} 把，${durationText(d.ms)}，${phaseText(d.wipes)}`);
+    bar.setAttribute("aria-label", tr(`${d.label}，${d.pulls} 把，${durationText(d.ms)}，${phaseText(d.wipes)}`,
+      `${d.label}, ${d.pulls} pulls, ${durationText(d.ms)}, ${phaseText(d.wipes)}`));
 
     const paint = svgEl("svg", { class: "weekPaint", viewBox: "0 0 100 104", preserveAspectRatio: "none", "aria-hidden": "true" });
     const h = d.ms ? Math.max(8, d.ms / max * 96) : 3;
@@ -987,7 +999,7 @@ function weeklyChart(stat) {
     bar.appendChild(paint);
 
     const tip = el("span", "weekTip");
-    tip.appendChild(el("span", "tipTime", `${durationText(d.ms)} · ${d.pulls} 把`));
+    tip.appendChild(el("span", "tipTime", `${durationText(d.ms)} · ${d.pulls} ${tr("把", "pulls")}`));
     tip.appendChild(el("span", "tipWipe", phaseText(d.wipes)));
     bar.appendChild(tip);
     bar.onclick = () => {
@@ -1021,8 +1033,9 @@ async function updatePoints() {
     const r = d.rateLimitData;
     if (!r) return;
     const mins = Math.ceil((r.pointsResetIn || 0) / 60);
-    const when = mins > 0 ? `，${mins} 分钟后重置` : "";
-    $("#points").textContent = `查询额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`;
+    const when = mins > 0 ? tr(`，${mins} 分钟后重置`, `, resets in ${mins} min`) : "";
+    $("#points").textContent = tr(`查询额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`,
+      `API points used ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour}${when}`);
   } catch { /* 点数显示是装饰，失败不打扰 */ }
 }
 
@@ -1047,7 +1060,7 @@ async function runQuery() {
   hideSugg();
   const box = $("#result");
   box.innerHTML = "";
-  box.appendChild(el("div", "spin", "查询中"));
+  box.appendChild(el("div", "spin", tr("查询中", "Searching")));
 
   try {
     let name, server, note = null;
@@ -1058,8 +1071,10 @@ async function runQuery() {
       if (seq !== querySeq) return;
       if (!r.name) {
         showMsg(s
-          ? `FF Logs 上没找到角色「${n}@${s}」。\n确认服务器名和写法（黒/黑 已自动多试）；也可以只输入角色名全服自动找。\n查不到 ≠ 没打 —— 可能没传过 log。`
-          : `全国服都没搜到叫「${n}」且传过 log 的角色。\n确认名字写法；「没找到 ≠ 没打」——可能没传过 log，或传到了国际服站。`);
+          ? tr(`FF Logs 上没找到角色「${n}@${s}」。\n确认服务器名和写法（黒/黑 已自动多试）；也可以只输入角色名全服自动找。\n查不到 ≠ 没打 —— 可能没传过 log。`,
+               `Character "${n}@${s}" not found on FF Logs.\nCheck the server name and spelling (黒/黑 variants auto-tried); you can also enter just the name to search all servers.\nNot found ≠ never played — they may just never have uploaded a log.`)
+          : tr(`全国服都没搜到叫「${n}」且传过 log 的角色。\n确认名字写法；「没找到 ≠ 没打」——可能没传过 log，或传到了国际服站。`,
+               `No character named "${n}" with uploaded logs found on any CN server.\nCheck the spelling; not found ≠ never played — maybe no logs uploaded, or they were uploaded to the international site.`));
         return;
       }
       ({ name, server } = r); note = r.note;
@@ -1071,10 +1086,11 @@ async function runQuery() {
     box.innerHTML = "";
     const head = el("div", "charHead");
     head.appendChild(el("span", "who", `${name} @ ${server}`));
-    head.appendChild(el("span", "meta", ZONE_TABS.find(z => z.id === currentZone)?.label || ""));
+    const curTab = ZONE_TABS.find(z => z.id === currentZone);
+    head.appendChild(el("span", "meta", curTab ? zoneLabel(curTab) : ""));
     box.appendChild(head);
     if (note) box.appendChild(el("div", "notice", "⚠ " + note));
-    box.appendChild(el("div", "spin", "查询中"));
+    box.appendChild(el("div", "spin", tr("查询中", "Searching")));
 
     // 15 分钟内同角色同副本复用结果；命中缓存时每 40 秒轻量探测一次新报告
     const lk = `${norm(name + "@" + server)}|${currentZone}`;
@@ -1091,26 +1107,30 @@ async function runQuery() {
     writeUrl(name, server, currentZone);
     if (scanFails > 0) {
       box.appendChild(el("div", "notice warn",
-        `⚠ 有 ${scanFails} 份报告加载失败（限流或网络），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`));
+        tr(`⚠ 有 ${scanFails} 份报告加载失败（限流或网络），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`,
+           `⚠ ${scanFails} report(s) failed to load (rate limit or network); results may be incomplete. Retry later — successfully cached reports won't cost points again.`)));
     }
     if (notFound || !rows.length) {
-      box.appendChild(el("div", "msg", "FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。"));
+      box.appendChild(el("div", "msg", tr("FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。",
+        "No records for this duty on FF Logs. Not found ≠ never played — maybe no logs were uploaded.")));
     }
     for (const row of rows) {
       if (!row.cleared) {
         if (row.pull) box.appendChild(pullCard(row.group, row.pull, progressText(row.pull), "prog", null, row.weekStat));
-        else box.appendChild(pullCard(row.group, null, "无记录", "prog", null, row.weekStat));
+        else box.appendChild(pullCard(row.group, null, tr("无记录", "No records"), "prog", null, row.weekStat));
         continue;
       }
       if (!head.querySelector(".clearBadge")) head.appendChild(clearBadge(row));
       if (row.weekKill) {
         // 通关时刻=那把的 endMs（boss 倒下那一刻），不是 startMs（那把开始时间）
         box.appendChild(pullCard(row.group, { ...row.weekKill, timeMs: row.weekKill.endMs },
-          "最近通关", "clear", `近7天过本${row.weekStat?.kills || 1}次`, row.weekStat));
+          tr("最近通关", "Latest clear"), "clear",
+          tr(`近7天过本${row.weekStat?.kills || 1}次`, `${row.weekStat?.kills || 1} clear(s) in last 7 days`), row.weekStat));
       } else if (row.weekPull) {
-        box.appendChild(pullCard(row.group, row.weekPull, "近7天" + progressText(row.weekPull), "clear", null, row.weekStat));
+        box.appendChild(pullCard(row.group, row.weekPull,
+          tr("近7天" + progressText(row.weekPull), "Last 7 days: " + progressText(row.weekPull)), "clear", null, row.weekStat));
       } else {
-        box.appendChild(pullCard(row.group, null, "近7天无记录", "clear", null,
+        box.appendChild(pullCard(row.group, null, tr("近7天无记录", "No pulls in last 7 days"), "clear", null,
           row.weekStat?.pulls ? row.weekStat : null));
       }
     }
@@ -1119,11 +1139,11 @@ async function runQuery() {
     if (seq !== querySeq) return; // 已被新查询取代，别用旧错误盖掉新结果
     if (e instanceof FFLogsError && (e.message === "NEED_CONFIG" || e.message === "NEED_LOGIN")) {
       showMsg(e.message === "NEED_LOGIN"
-        ? "FF Logs 登录已过期，请重新登录。"
-        : "还没连接 FF Logs —— 登录一次就能查，1分钟搞定。", true);
+        ? tr("FF Logs 登录已过期，请重新登录。", "FF Logs login expired, please log in again.")
+        : tr("还没连接 FF Logs —— 登录一次就能查，1分钟搞定。", "Not connected to FF Logs yet — log in once and you're set, takes a minute."), true);
       openSettings();
     } else {
-      showMsg((e instanceof FFLogsError ? "" : "出错了：") + e.message, true);
+      showMsg((e instanceof FFLogsError ? "" : tr("出错了：", "Error: ")) + e.message, true);
     }
   } finally {
     saveCache();
@@ -1182,7 +1202,7 @@ function onInput() {
   probeTimer = setTimeout(async () => {
     const cached = probeCache.get(v);
     const cacheFresh = cached && Date.now() - cached.ts < PROBE_CACHE_TTL;
-    if (!cacheFresh) renderSugg([...local, { dim: true, text: "全服搜索中…（耗点数，可直接回车）" }]);
+    if (!cacheFresh) renderSugg([...local, { dim: true, text: tr("全服搜索中…（耗点数，可直接回车）", "Searching all servers… (costs points; Enter searches directly)") }]);
     try {
       const r = await searchCharacter(v, 1);
       if (seq !== probeSeq) return;
@@ -1190,14 +1210,14 @@ function onInput() {
         .map(h => ({ name: h.name, server: h.server, when: h.lastTs ? fmtCST(h.lastTs).slice(0, 5) : "" }))
         .filter(h => !local.some(l => l.name === h.name && l.server === h.server));
       if (!remote.length && !local.length)
-        renderSugg([{ dim: true, text: "暂无上传过 log 的同名角色 · 回车可再查" }]);
+        renderSugg([{ dim: true, text: tr("暂无上传过 log 的同名角色 · 回车可再查", "No character with uploaded logs by that name · press Enter to retry") }]);
       else renderSugg([...local, ...remote]);
       saveCache();
     } catch (e) {
       if (seq !== probeSeq) return;
-      const tip = (e instanceof FFLogsError && /限流/.test(e.message))
-        ? "额度紧张，建议回车查询或稍后再试"
-        : "远程搜索失败，可直接回车查询";
+      const tip = (e instanceof FFLogsError && /限流|rate limit/i.test(e.message))
+        ? tr("额度紧张，建议回车查询或稍后再试", "Points running low — press Enter to search, or try later")
+        : tr("远程搜索失败，可直接回车查询", "Remote search failed — press Enter to search directly");
       renderSugg([...local, { dim: true, text: tip }]);
     }
   }, SUGGEST_DEBOUNCE_MS);
@@ -1213,9 +1233,9 @@ function selectQueryTextSoon() {
 /* ---- 设置 / 登录 UI ---- */
 function renderAuthUI() {
   const btn = $("#settingsBtn");
-  if (userAuth && userAuth.base === config.base) btn.textContent = userAuth.name || "已登录";
-  else if (config.clientId) btn.textContent = "API 设置";
-  else btn.textContent = "登录 FF Logs";
+  if (userAuth && userAuth.base === config.base) btn.textContent = userAuth.name || tr("已登录", "Signed in");
+  else if (config.clientId) btn.textContent = tr("API 设置", "API settings");
+  else btn.textContent = tr("登录 FF Logs", "Log in to FF Logs");
 }
 
 function renderAuthBox() {
@@ -1223,20 +1243,22 @@ function renderAuthBox() {
   box.innerHTML = "";
   if (userAuth && userAuth.base === config.base) {
     const row = el("div", "authRow");
-    row.appendChild(el("span", "authName", "已登录：" + (userAuth.name || "FF Logs 用户")));
-    const out = el("button", "ghost", "退出登录");
+    row.appendChild(el("span", "authName", tr("已登录：", "Signed in: ") + (userAuth.name || tr("FF Logs 用户", "FF Logs user"))));
+    const out = el("button", "ghost", tr("退出登录", "Sign out"));
     out.type = "button";
     out.onclick = () => { saveUser(null); renderAuthBox(); };
     row.appendChild(out);
     box.appendChild(row);
   } else if (!OAUTH_CLIENT_ID) {
-    box.appendChild(el("p", "note", "登录功能未启用（站长未配置 OAuth Client ID），请用下方高级方式。"));
+    box.appendChild(el("p", "note", tr("登录功能未启用（站长未配置 OAuth Client ID），请用下方高级方式。",
+      "Login is not enabled (site owner hasn't set an OAuth Client ID); use the advanced option below.")));
   } else {
-    const b = el("button", "loginBtn", "用 FF Logs 账号登录");
+    const b = el("button", "loginBtn", tr("用 FF Logs 账号登录", "Log in with FF Logs"));
     b.type = "button";
     b.onclick = login;
     box.appendChild(b);
-    box.appendChild(el("p", "hint", "跳转到 FF Logs 官网授权，本站不经手你的密码"));
+    box.appendChild(el("p", "hint", tr("跳转到 FF Logs 官网授权，本站不经手你的密码",
+      "Redirects to FF Logs for authorization; this site never sees your password")));
   }
 }
 
@@ -1261,6 +1283,32 @@ $("#settings").addEventListener("close", () => {
   renderAuthUI();
   updatePoints();
 });
+
+/* ---- 语言切换 + 英文版静态文案（HTML 以中文为源，en 时 JS 覆写） ---- */
+$("#langToggle").textContent = tr("中/英", "Chinese/English");
+$("#langToggle").title = tr("切换语言", "Switch language");
+$("#langToggle").onclick = () => {
+  localStorage.fpw_lang = LANG === "en" ? "zh" : "en";
+  location.reload();   // ponytail: 状态全在 URL/缓存里，整页重载最省事
+};
+if (LANG === "en") {
+  document.documentElement.lang = "en";
+  $("#themeToggle").title = "Toggle appearance";
+  $("#settingsBtn").title = "Connect FF Logs";
+  $("#q").placeholder = "Character, or Character@Server";
+  $("#go").textContent = "Search";
+  document.querySelector(".searchHint").textContent =
+    "Based on public FF Logs data — only uploaded logs show up. Not found ≠ never played";
+  $("#settings h2").textContent = "Connect FF Logs";
+  $("#advBox summary").textContent = "Use your own API client (advanced)";
+  $("#advBox .note").innerHTML =
+    'Create a client at <a href="https://cn.fflogs.com/api/clients/" target="_blank" rel="noopener">cn.fflogs.com/api/clients</a> ' +
+    '(any name; set Redirect URL to <code>https://localhost</code>), then paste the Client ID and Client Secret here and hit Save. ' +
+    'Credentials are stored only in your own browser.';
+  $("#cfgBase").parentElement.firstChild.nodeValue = "FF Logs site";
+  $("#cfgSave").textContent = "Save";
+  document.querySelector('#settings button[value="cancel"]').textContent = "Close";
+}
 
 /* ---- 绑定 ---- */
 $("#settingsBtn").onclick = openSettings;
