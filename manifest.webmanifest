@@ -1,6 +1,6 @@
 {
-  "name": "No进度欺诈",
-  "short_name": "No进度欺诈",
+  "name": "No memes",
+  "short_name": "No memes",
   "description": "基于 FF Logs 公开数据的最终幻想14绝本进度查询",
   "start_url": "./",
   "scope": "./",

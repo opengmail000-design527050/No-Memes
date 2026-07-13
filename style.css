@@ -1,5 +1,5 @@
 @charset "UTF-8";
-/* No进度欺诈 —— 手绘水彩绘本风:奶油纸底、手写字、歪歪扭扭的手绘框 */
+/* No memes —— 手绘水彩绘本风:奶油纸底、手写字、歪歪扭扭的手绘框 */
 /* ponytail: 插画(莫古力/城堡/云)是真实绘画素材,CSS 只用渐变意会;想要真插画需另备 PNG 素材 */
 
 :root {
@@ -471,25 +471,6 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 .weekTip .tipWipe { display: none; }
 .weekBar.wipeOn .tipTime { display: none; }
 .weekBar.wipeOn .tipWipe { display: inline; }
-.weekBar:first-child .weekTip {
-  left: 0;
-  transform: translate(0, 4px) rotate(-.5deg);
-}
-.weekBar:first-child .weekTip::after,
-.weekBar:last-child .weekTip::after { display: none; }
-.weekBar:first-child:hover .weekTip,
-.weekBar:first-child.on .weekTip {
-  transform: translate(0, 0) rotate(-.5deg);
-}
-.weekBar:last-child .weekTip {
-  left: auto;
-  right: 0;
-  transform: translate(0, 4px) rotate(-.5deg);
-}
-.weekBar:last-child:hover .weekTip,
-.weekBar:last-child.on .weekTip {
-  transform: translate(0, 0) rotate(-.5deg);
-}
 .weekBase {
   display: block;
   width: 100%;

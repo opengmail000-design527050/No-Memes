@@ -1,4 +1,4 @@
-/* No进度欺诈 web 版 —— progress_query.py 的浏览器移植。
+/* No memes web 版 —— progress_query.py 的浏览器移植。
  * 纯静态、查询直连 cn.fflogs.com（CORS 已验证）。鉴权双模式：
  *   A. FF Logs 账号登录（OAuth 授权码 + PKCE，公共客户端无 secret）→ /api/v2/user，点数各算各的
  *   B. 用户自带 client 凭据（高级设置，localStorage）→ /api/v2/client
