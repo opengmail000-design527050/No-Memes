@@ -1,10 +1,9 @@
 /* No memes — 仅缓存本站静态资源，绝不代理 cn.fflogs.com（省点数 + 避免脏数据） */
 "use strict";
 
-const CACHE = "no-memes-static-v4";
+const CACHE = "no-memes-static-v5";
 const PRECACHE = [
   "./",
-  "./index.html",
   "./app.js",
   "./style.css",
   "./manifest.webmanifest",
@@ -59,7 +58,7 @@ self.addEventListener("fetch", event => {
       return res;
     } catch {
       if (req.mode === "navigate") {
-        const shell = await caches.match("./index.html");
+        const shell = await caches.match("./");
         if (shell) return shell;
       }
       throw new Error("offline");
