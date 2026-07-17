@@ -1035,7 +1035,7 @@ function renderPoints() {
   if (!r) return;
   const mins = Math.ceil((r.pointsResetIn || 0) / 60);
   const when = mins > 0 ? tr(`，${mins} 分钟后重置`, `, resets in ${mins} min`) : "";
-  $("#points").textContent = tr(`查询额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`,
+  $("#points").textContent = tr(`API额度已用 ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour} 点${when}`,
     `API points used ${Math.round(r.pointsSpentThisHour)} / ${r.limitPerHour}${when}`);
 }
 
@@ -1052,6 +1052,32 @@ function showMsg(text, isErr) {
   const box = $("#result");
   box.innerHTML = "";
   box.appendChild(el("div", "msg" + (isErr ? " err" : ""), text));
+}
+
+function renderEmptyState() {
+  const box = $("#result");
+  box.innerHTML = "";
+  if (!history.length) {
+    box.appendChild(el("div", "msg", tr(
+      "输入角色名开始查询，支持「角色名@服务器」精确指定。",
+      "Type a character name to search; use Name@Server to be precise.")));
+    return;
+  }
+  const wrap = el("div", "emptyHistory");
+  wrap.appendChild(el("div", "ehTitle", tr("最近查询", "Recent — tap to re-run")));
+  const chipsBox = el("div", "chips");
+  for (const h of history.slice(0, 10)) {
+    const c = el("button", "chip", `${h.name}@${h.server}`);
+    c.type = "button";
+    c.onclick = () => {
+      $("#q").value = `${h.name}@${h.server}`;
+      currentChar = null;
+      runQuery();
+    };
+    chipsBox.appendChild(c);
+  }
+  wrap.appendChild(chipsBox);
+  box.appendChild(wrap);
 }
 
 function pushHistory(name, server) {
@@ -1159,7 +1185,7 @@ async function runQuery() {
     if (e instanceof FFLogsError && (e.message === "NEED_CONFIG" || e.message === "NEED_LOGIN")) {
       showMsg(e.message === "NEED_LOGIN"
         ? tr("FF Logs 登录已过期，请重新登录。", "FF Logs login expired, please log in again.")
-        : tr("还没连接 FF Logs —— 登录一次就能查，1分钟搞定。", "Not connected to FF Logs yet — log in once and you're set, takes a minute."), true);
+        : tr("还没连接 FF Logs —— 登录一次就能查。", "Not connected to FF Logs yet — log in once and you're set, takes a minute."), true);
       openSettings();
     } else {
       showMsg((e instanceof FFLogsError ? "" : tr("出错了：", "Error: ")) + e.message, true);
@@ -1221,7 +1247,7 @@ function onInput() {
   probeTimer = setTimeout(async () => {
     const cached = probeCache.get(v);
     const cacheFresh = cached && Date.now() - cached.ts < PROBE_CACHE_TTL;
-    if (!cacheFresh) renderSugg([...local, { dim: true, text: tr("全服搜索中…（耗点数，可直接回车）", "Searching all servers… (costs points; Enter searches directly)") }]);
+    if (!cacheFresh) renderSugg([...local, { dim: true, text: tr("全服搜索中…", "Searching all servers… (costs points; Enter searches directly)") }]);
     try {
       const r = await searchCharacter(v, 1);
       if (seq !== probeSeq) return;
@@ -1229,14 +1255,14 @@ function onInput() {
         .map(h => ({ name: h.name, server: h.server, when: h.lastTs ? fmtCST(h.lastTs).slice(0, 5) : "" }))
         .filter(h => !local.some(l => l.name === h.name && l.server === h.server));
       if (!remote.length && !local.length)
-        renderSugg([{ dim: true, text: tr("暂无上传过 log 的同名角色 · 回车可再查", "No character with uploaded logs by that name · press Enter to retry") }]);
+        renderSugg([{ dim: true, text: tr("暂无上传过 log 的同名角色", "No character with uploaded logs by that name · press Enter to retry") }]);
       else renderSugg([...local, ...remote]);
       saveCache();
     } catch (e) {
       if (seq !== probeSeq) return;
       const tip = (e instanceof FFLogsError && /限流|rate limit/i.test(e.message))
-        ? tr("额度紧张，建议回车查询或稍后再试", "Points running low — press Enter to search, or try later")
-        : tr("远程搜索失败，可直接回车查询", "Remote search failed — press Enter to search directly");
+        ? tr("额度紧张，建议稍后再试", "Points running low — press Enter to search, or try later")
+        : tr("远程搜索失败", "Remote search failed — press Enter to search directly");
       renderSugg([...local, { dim: true, text: tip }]);
     }
   }, SUGGEST_DEBOUNCE_MS);
@@ -1341,6 +1367,7 @@ $("#langToggle").onclick = () => {
   renderAuthUI();
   renderPoints();
   if (lastRender) renderResultBox(lastRender.name, lastRender.server, lastRender.res, lastRender.note);
+  else if (hasAuth()) renderEmptyState();
 };
 
 /* ---- 绑定 ---- */
@@ -1368,7 +1395,7 @@ renderChips();
     if (deep.c) {
       currentChar = null;
       runQuery();
-    }
+    } else renderEmptyState();
   }
 })();
 
