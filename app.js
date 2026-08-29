@@ -444,21 +444,35 @@ function parseReport(rep, code, wname, wserver, meta) {
 // 返回 { results, fails }；fails = 网络/限流失败的报告数（空报告 ≠ 失败，不计入）
 async function scanReports(items, wname, wserver, meta) {
   const out = [], misses = [];
-  let fails = 0;
+  let fails = 0, failMsg = "";
   for (const it of items) {
     const hit = cache.scans[`${it.code}|${wname}|${wserver}`];
     if (hit) out.push(hit.r); else misses.push(it);
   }
-  if (!misses.length) return { results: out, fails: 0 };
+  if (!misses.length) return { results: out, fails: 0, failMsg: "" };
   const chunks = [];
   for (let i = 0; i < misses.length; i += BATCH) chunks.push(misses.slice(i, i + BATCH));
+  const noRetry = e => {   // 限流/要登录：重试没用还费点数
+    const m = String(e?.message || e);
+    return m === "NEED_LOGIN" || m.includes("限流") || m.includes("rate limited");
+  };
   const results = await Promise.all(chunks.map(async chunk => {
     const alias = chunk.map((it, i) => `r${i}: report(code:${JSON.stringify(it.code)}){ ${REPORT_FIELDS} }`).join("\n");
+    const q = `query{ reportData{ ${alias} }}`;
     try {
-      const rd = (await gql(`query{ reportData{ ${alias} }}`)).reportData || {};
+      let rd;
+      try {
+        rd = (await gql(q)).reportData || {};
+      } catch (e) {
+        if (noRetry(e)) throw e;
+        await new Promise(r => setTimeout(r, 800));   // 瞬时 5xx/网络抖动：等一下重试一次
+        rd = (await gql(q)).reportData || {};
+      }
       return chunk.map((it, i) => parseReport(rd["r" + i] || {}, it.code, wname, wserver, meta));
-    } catch {
+    } catch (e) {
       fails += chunk.length;
+      failMsg ||= String(e?.message || e);   // 留住真实原因，别再瞎猜限流还是网络
+      console.warn("scanReports batch failed:", e);
       return chunk.map(() => null);   // 整批失败：不缓存，当空处理
     }
   }));
@@ -469,7 +483,7 @@ async function scanReports(items, wname, wserver, meta) {
       cache.scans[`${it.code}|${wname}|${wserver}`] = { ts: Date.now(), r: p };
     out.push(p);
   }));
-  return { results: out, fails };
+  return { results: out, fails, failMsg };
 }
 
 // 翻角色报告列表（增量缓存 + 早停）。untilTs：保证列表至少覆盖到这个时间点（周最佳用）。
@@ -623,11 +637,12 @@ async function zoneProgress(name, server, zoneId) {
   if (needScan.length) for (const r of zoneRows.slice(0, 40)) scanSet.set(r.code, r);
   for (const r of zoneRows) if ((r.ts || 0) >= scanCutoff) scanSet.set(r.code, r);
 
-  let partials = [], scanFails = 0;
+  let partials = [], scanFails = 0, scanFailMsg = "";
   if (scanSet.size) {
     const scanned = await scanReports([...scanSet.values()], norm(name), norm(server), await encMeta().then(m => m.meta));
     partials = scanned.results;
     scanFails = scanned.fails;
+    scanFailMsg = scanned.failMsg;
   }
 
   const eidToGroup = {};
@@ -672,7 +687,7 @@ async function zoneProgress(name, server, zoneId) {
   }
 
   rows.sort((a, b) => (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1) || ((a.pull?.fp ?? 999) - (b.pull?.fp ?? 999)));
-  return { rows, reportStamp, scanFails };
+  return { rows, reportStamp, scanFails, scanFailMsg };
 }
 
 /* ============ UI ============ */
@@ -1093,18 +1108,36 @@ function renderResultBox(name, server, res, note) {
   lastRender = { name, server, res, note };
   const box = $("#result");
   box.innerHTML = "";
+  const { rows, notFound, scanFails = 0, scanFailMsg = "" } = res;
   const head = el("div", "charHead");
-  head.appendChild(el("span", "who", `${name} @ ${server}`));
+  // 头像职业:按「最近通关 → 近7天最远那把 → 最远进度那把」取实打实的那一把;
+  // 过本了但近7天一条记录都没有,才回退到 row.job(历史通关里用得最多的职业)。
+  // 注意:回退前它可能和右边徽章印的职业名不一致,这是有意的——图标说「最近在拿什么打」。
+  const myJob = rows.map(r => r.weekKill?.job || r.weekPull?.job || r.pull?.job || r.job).find(Boolean);
+  if (myJob) {
+    const img = el("img", "charJob");
+    img.src = `icons/${myJob}.png`;
+    img.alt = "";
+    img.title = jobName(myJob);
+    img.onerror = () => img.remove();
+    head.appendChild(img);
+  }
+  // 名字和服务器拉开字号:整行同一个 27px 是「单调」的来源
+  const who = el("span", "who");
+  who.appendChild(el("span", "whoName", name));
+  who.appendChild(el("span", "whoAt", "@"));
+  who.appendChild(el("span", "whoServer", server));
+  head.appendChild(who);
   const curTab = ZONE_TABS.find(z => z.id === currentZone);
   head.appendChild(el("span", "meta", curTab ? zoneLabel(curTab) : ""));
   box.appendChild(head);
   if (note) box.appendChild(el("div", "notice", "⚠ " + note));
 
-  const { rows, notFound, scanFails = 0 } = res;
   if (scanFails > 0) {
+    const why = scanFailMsg || tr("限流或网络", "rate limit or network");
     box.appendChild(el("div", "notice warn",
-      tr(`⚠ 有 ${scanFails} 份报告加载失败（限流或网络），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`,
-         `⚠ ${scanFails} report(s) failed to load (rate limit or network); results may be incomplete. Retry later — successfully cached reports won't cost points again.`)));
+      tr(`⚠ 有 ${scanFails} 份报告加载失败（${why}），结果可能不完整。稍后再点查询重试，一般不重复扣已成功缓存的点数。`,
+         `⚠ ${scanFails} report(s) failed to load (${why}); results may be incomplete. Retry later — successfully cached reports won't cost points again.`)));
   }
   if (notFound || !rows.length) {
     box.appendChild(el("div", "msg", tr("FF Logs 上没查到这个副本的记录。查不到不等于没打——可能没传过 log。",
@@ -1399,7 +1432,7 @@ renderChips();
   }
 })();
 
-const THEME_COLOR = { light: "#FFFAFA", dark: "#302F2E" };
+const THEME_COLOR = { light: "#FBF6EB", dark: "#0F0C0A" };
 $("#themeToggle").onclick = () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;

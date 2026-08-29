@@ -4,8 +4,8 @@
 
 :root {
   color-scheme: light;
-  --paper: #FFFAFA;
-  --card: #FEF8F8;
+  --paper: #FBF6EB;                     /* 真·奶油纸(原来的 #FFFAFA 是雪白偏粉,和顶部暖光对不上) */
+  --card: #FFFCF5;
   --ink: #3a3226;
   --ink-soft: #6e644f;
   --line: rgba(58, 50, 38, .8);        /* 手绘描边 */
@@ -30,14 +30,20 @@
   --brush-orange-2: rgba(222, 140, 110, .28);
   --wipe-fill: rgb(126, 101, 166);
   /* 手绘戳影 / 状态色 / 局部底 — 亮暗共用 token,暗色只改变量 */
-  --glow: #fdf6e4;
+  --glow: #FFFCF0;
   --glow-2: transparent;
+  --glow-3: transparent;
+  --vignette: none;                     /* 暗色专用:四周压暗 */
+  --grain: none;                        /* 暗色专用:纸纹噪点 */
   --selection: rgba(217, 119, 87, .28);
   --btn-fg: #fff;
+  --danger: var(--accent);               /* 报错/警告字,亮色=强调色本身 */
+  --btn-bg: var(--accent-soft);          /* 实心按钮底,单独抽出:暗色换血红时不牵连链接/切换器 */
+  --btn-bg-hover: var(--accent);
   --btn-edge: rgba(58, 50, 38, .5);
   --status-clear: #337a55;
   --status-prog: #a2553f;
-  --hover-wash: #FEE2E2;
+  --hover-wash: #F7EFE0;
   --input-bg: #fff;
   --code-bg: #f1e6cb;
   --chip-on-bg: rgba(226, 131, 120, .16);
@@ -77,9 +83,13 @@ body {
   color: var(--ink);
   /* 水彩意象:中央暖光(+暗色第二层脚光) */
   background:
+    var(--grain),
+    var(--vignette),
     radial-gradient(1200px 600px at 50% -200px, var(--glow) 0%, transparent 70%),
     radial-gradient(800px 420px at 12% 110%, var(--glow-2) 0%, transparent 55%),
+    radial-gradient(620px 340px at 92% 78%, var(--glow-3) 0%, transparent 60%),
     var(--paper);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
   background-attachment: fixed;
   display: flex;
   flex-direction: column;
@@ -146,7 +156,7 @@ button {
   letter-spacing: .12em;
   padding: 11px 26px;
   color: var(--btn-fg);
-  background: var(--accent-soft);
+  background: var(--btn-bg);
   border: 2px solid var(--btn-edge);
   border-radius: var(--wobble-b);
   box-shadow: var(--sh-btn);
@@ -155,7 +165,7 @@ button {
   transition: transform .15s ease, background .15s, color .15s, border-color .15s, box-shadow .15s;
 }
 button:hover {
-  background: var(--accent);
+  background: var(--btn-bg-hover);
   transform: rotate(.3deg) translateY(-1px);
 }
 button:active {
@@ -258,11 +268,38 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 
 .charHead {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   margin: 6px 2px 16px;
+  padding-bottom: 13px;
+  /* 底下一条手绘断线:和 .weekStat / footer 同一条线,把角色这块和下面的卡片分开,
+     不然它就是一行悬空的字 */
+  background-image: var(--ink-dash);
+  background-repeat: repeat-x;
+  background-position: left bottom;
 }
-.charHead .who { font-size: 27px; font-weight: 700; letter-spacing: .04em; }
+/* 角色头像=本人这次用的职业纹章,手绘歪框 + 戳影,和卡片一套语言 */
+.charHead .charJob {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: block;
+  border-radius: 11px 14px 10px 13px / 13px 10px 14px 11px;
+  transform: rotate(-2deg);
+  filter: var(--icon-drop);
+  mix-blend-mode: var(--member-blend);
+  opacity: var(--member-opacity);
+}
+.charHead .who {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.charHead .whoName { font-size: 27px; font-weight: 700; letter-spacing: .04em; }
+.charHead .whoAt { font-size: 17px; color: var(--ink-soft); }
+.charHead .whoServer { font-size: 17px; color: var(--ink-soft); letter-spacing: .06em; }
 .charHead .meta { display: none; }
 
 /* ID 右边的已通关徽章:JS 生成的水彩笔刷垫底,文字浮在上面 */
@@ -628,9 +665,9 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   line-height: 1.8;
   white-space: pre-wrap;
 }
-.msg.err { color: var(--accent); }
+.msg.err { color: var(--danger); }
 .notice { font-size: 14px; color: var(--ink-soft); margin: 4px 2px 12px; }
-.notice.warn { color: var(--accent); }
+.notice.warn { color: var(--danger); }
 
 .emptyHistory { margin: 8px 2px; }
 .ehTitle { font-size: 14px; color: var(--ink-soft); letter-spacing: .08em; margin-bottom: 4px; }
@@ -728,9 +765,20 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
 @media (min-width: 2200px) { body { zoom: 1.45; min-height: calc(100vh / 1.45); } }
 @media (min-width: 3200px) { body { zoom: 1.9;  min-height: calc(100vh / 1.9); } }
 
-@media (max-width: 560px) {
+/* ★ 断点 740 不是拍脑袋:header 一行放得下要 322(brand)+77+112+138+3*10(gap)+48(padding)=727,
+   窄于这个数「No memes」和「登录 FF Logs」就会各折成两行(560 那版在 600~720 宽必崩)。
+   改 header 里任何一个元素的宽度都要重算这个数。 */
+@media (max-width: 740px) {
+  /* 窄窗标题和三个按钮挤一行会把「No memes」和「登录 FF Logs」都折断,改成标题独占一行 */
+  /* 三个按钮靠右成一簇,和宽屏时它们贴在右边是同一个读法;space-between 会把它们撒开,看着像随手摆的 */
+  header { flex-wrap: wrap; justify-content: flex-end; }
+  header .brand { flex: 1 0 100%; margin-bottom: 12px; }
+  .brand h1 { white-space: nowrap; }
+  #settingsBtn { white-space: nowrap; }
   .brandTop { gap: 10px; }
   .brandIcon { width: 46px; height: 46px; border-radius: 14px; }
+  .charHead .charJob { width: 32px; height: 32px; }
+  .charHead .whoName { font-size: 23px; }
   .brand h1 { font-size: 32px; }
   header { padding-top: 30px; }
   button.ghost { font-size: 12px; padding: 6px 10px; }
@@ -772,70 +820,117 @@ html[data-lang="en"] .themeToggle .tw.en {
 }
 header .brand { margin-right: auto; }
 header { gap: 10px; }
-
-/* ---------- 暗色模式:同一本奶油纸,灯调暗(不换品牌色) ----------
-   原则: 纸/墨只改明度; 陶土橙·金·紫水彩·笔刷 RGB 尽量沿用亮色。
-   不是「炭灰 UI / 牛皮纸」另一套主题。 */
+/* ---------- 暗色模式:哥特手抄本(黑羊皮纸 · 骨白墨 · 烛金 · 血陶土 · 彩窗紫) ----------
+   原则: 不是把亮色调暗,是同一支笔换到夜里的另一本册子。
+   纸=烧焦的黑褐,墨=象牙白,光=蜡烛的蜜色,强调色=干掉的血红,周柱=黄铜烛台。
+   整套是暖的:暗色里除了阴影没有冷色,冷紫会立刻破坏烛光感。 */
 html[data-theme="dark"] {
   color-scheme: dark;
-  /* 表面:背景用最初暗色定稿 #302F2E; card 略亮一档便于抬起 */
-  --paper: #302F2E;
-  --card: #3a3937;
-  /* 字色 ≈ 亮色的纸色; 软字 ≈ 亮色 ink-soft 提亮 */
-  --ink: #f3ecdf;
-  --ink-soft: #a89a80;
-  /* 描边用奶油色当「反相墨」,低对比像淡墨 */
-  --line: rgba(232, 224, 208, .42);
-  --line-soft: rgba(232, 224, 208, .22);
-  /* 颜料原样(或仅微提可读),气质靠它们延续 */
-  --gold: #e2b64c;
-  --accent: #cc6e64;
-  --accent-soft: #e28378;
-  --heal: #5d8f4a;
-  --week-fill: rgba(184, 167, 216, .34);
-  --week-fill-hover: rgba(184, 167, 216, .48);
-  --week-ink: rgba(198, 182, 228, .88);
-  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%23a89880' stroke-width='1.4' stroke-linecap='round' opacity='.5'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
-  /* 笔刷:亮色同款 RGB,略提 alpha 保证暗底可见 */
-  --brush-green-1: rgba(88, 214, 141, .32);
-  --brush-green-2: rgba(88, 214, 141, .30);
-  --brush-orange-1: rgba(222, 140, 110, .32);
-  --brush-orange-2: rgba(222, 140, 110, .30);
-  --wipe-fill: rgb(126, 101, 166);
-  /* 顶光回到最初暗色: #3a3938 暖灰,第二层关掉 */
-  --glow: #3a3938;
-  --glow-2: transparent;
-  --selection: rgba(217, 119, 87, .28);
-  --btn-fg: #faf3e5;
-  --btn-edge: rgba(58, 50, 38, .50);
-  /* 状态色 = 亮色同色相提亮,不改成薄荷绿/荧光 */
-  --status-clear: #4d8f68;
-  --status-prog: #c4785c;
-  --hover-wash: #444240;
-  --input-bg: #262524;
-  --code-bg: #3b3a38;
-  --chip-on-bg: rgba(226, 131, 120, .18);
-  --week-wash2: rgba(160, 138, 200, .28);
-  --week-wash2-hover: rgba(160, 138, 200, .40);
-  --stroke-soft: rgba(232, 224, 208, .32);
-  --stroke-ink: rgba(232, 224, 208, .38);
-  --backdrop: rgba(0, 0, 0, .5);
-  /* 戳影:暖墨褐,在原灰底上保持手绘厚度 */
-  --sh-sm: 2px 3px 0 rgba(0, 0, 0, .28);
-  --sh-md: 3px 4px 0 rgba(0, 0, 0, .32);
-  --sh-lg: 4px 6px 0 rgba(0, 0, 0, .30);
-  --sh-xl: 6px 8px 0 rgba(0, 0, 0, .40);
-  --sh-btn: 3px 4px 0 rgba(0, 0, 0, .35);
-  --sh-btn-press: 1px 1px 0 rgba(0, 0, 0, .35);
-  --sh-chip: 2px 3px 0 rgba(0, 0, 0, .26);
-  --sh-chip-press: 1px 1px 0 rgba(0, 0, 0, .26);
-  --icon-drop: drop-shadow(3px 4px 0 rgba(0, 0, 0, .35));
-  /* 职业图标:不能 multiply; 饱和度贴近亮色 multiply 后的观感 */
+  /* 表面:黑羊皮纸;card 抬起一档,靠明度而不是描边分层 */
+  --paper: #0f0c0a;
+  --card: #241e17;                       /* 比 paper 亮两档:黑底上卡片要靠明度立起来,不靠描边 */
+  /* 墨:骨白 / 旧羊皮 */
+  --ink: #efe4cf;                        /* 象牙白,被烛光照到的那一档 */
+  --ink-soft: #9d8f77;
+  /* 描边=淡骨白,压得很低,像烛光下的铅笔线 */
+  --line: rgba(232, 214, 178, .28);
+  --line-soft: rgba(232, 214, 178, .14);
+  /* ★ 暗色只有一个色系:画里那束暗红玫瑰。按明度分工,不按色相分工——
+     深的(#7a2a22 / #963a2c)做块面(按钮/柱子),亮一档的(#b06a55)做文字和描边才读得清。
+     关键是压饱和度:偏粉的亮鲑红(旧的 #d4685a)画里根本没有,一亮一饱就穿帮。
+     ★ 金只留 --gold 那一处(搜索提示的 ✧)和左下角那盏烛(--glow-2)。别再拿金做描边/光晕/hover:
+     hover 发金光、按下去变红,同一个按钮两种色相,这是用户明确否掉的。 */
+  --gold: #d8a44a;
+  /* ★ 色相锁在 355°:再往上到 5~14° 就是橙红(踩过),再往下到 348° 就是酒红偏紫(也踩过)。
+     改这几个值前先量色相角,别凭感觉调。 */
+  --rose-lit: #c2757a;                   /* H356 玫瑰受光面:文字/描边 */
+  --rose: #8f3038;                       /* H355 玫瑰主体 */
+  --rose-deep: #74232a;                  /* H355 玫瑰暗部:实心块面 */
+  /* 分工改成按明度而不是色相:玫瑰暗部(rose-deep/rose)做「块面」(按钮/柱子/选中 chip),
+     玫瑰受光面(rose-lit)做「线和字」(链接/描边/焦点圈/柱子勾边/hover 光晕)。
+     整页只有这一支色相在走明度,hover 和 active 自然就统一了。 */
+  --accent: var(--rose-lit);             /* 玫瑰受光面:链接 / 高亮词 / hover 文字 */
+  --accent-soft: #b0555c;                /* 玫瑰中调:描边 / 焦点圈 */
+  --danger: #e08a6b;                     /* 报错另留一支更亮的余烬,别和普通链接同色 */
+  --heal: #7d9c68;
+  /* 周柱=玫瑰暗红的块面,和按钮同一支色 */
+  --week-fill: rgba(143, 48, 56, .60);
+  --week-fill-hover: rgba(170, 62, 72, .74);
+  --week-ink: rgba(228, 202, 160, .94);
+  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%23985158' stroke-width='1.4' stroke-linecap='round' opacity='.62'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
+  /* 笔刷:暗底上必须比字暗,否则字被盖住(亮色是反过来的) */
+  --brush-green-1: rgba(76, 96, 52, .42);
+  --brush-green-2: rgba(76, 96, 52, .36);
+  --brush-orange-1: rgba(140, 50, 52, .48);
+  --brush-orange-2: rgba(140, 50, 52, .42);
+  --wipe-fill: rgb(143, 48, 56);
+  /* 氛围:顶上一片被烛火烘暖的空气,左下角一盏将熄的烛 */
+  --glow: #2a2016;
+  /* 两盏烛:左下近、右下远。别再加第三盏,三个光源就没有方向感了 */
+  --glow-2: rgba(206, 132, 46, .15);
+  --glow-3: rgba(196, 118, 44, .10);
+  /* 压边用暖近黑(不是纯黑),范围放大、收得慢——纯黑 .80 会把下半页压成一块死掉的黑板 */
+  --vignette: radial-gradient(128% 96% at 50% 30%, transparent 44%, rgba(10, 6, 4, .74) 100%);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
+  --selection: rgba(160, 52, 62, .34);
+  /* 平涂,不要渐变/内高光:那层反光一上来就变塑料按钮,和整页手绘不是一路。
+     玫瑰暗部,和柱子同一支色 */
+  --btn-bg: var(--rose-deep);
+  --btn-bg-hover: var(--rose);
+  --btn-fg: #f4e5c9;
+  --btn-edge: rgba(0, 0, 0, .55);
+  /* 状态色:提到骨白那一档,才压得住底下的笔刷 */
+  --status-clear: #a2bb80;               /* 苔绿,不用薄荷绿:冷绿在烛光里是脏的 */
+  --status-prog: #d4816a;                /* 余烬,不是橙:和玫瑰同一头暖调,别再往黄里跑 */
+  --hover-wash: #2b241c;
+  --input-bg: #171310;
+  --code-bg: #272017;
+  --chip-on-bg: var(--rose-deep);        /* 选中的副本=一块被点亮的暗红牌子,不是淡色底 */
+  --week-wash2: rgba(116, 35, 42, .54);
+  --week-wash2-hover: rgba(140, 46, 54, .68);
+  --stroke-soft: rgba(232, 214, 178, .24);
+  --stroke-ink: rgba(232, 214, 178, .32);
+  --backdrop: rgba(8, 5, 3, .70);
+  /* 戳影:近黑纸上纯黑更黑一档,手绘厚度还在 */
+  --sh-sm: 2px 3px 0 rgba(0, 0, 0, .45);
+  --sh-md: 3px 4px 0 rgba(0, 0, 0, .50);
+  --sh-lg: 4px 6px 0 rgba(0, 0, 0, .48);
+  --sh-xl: 6px 8px 0 rgba(0, 0, 0, .60);
+  --sh-btn: 3px 4px 0 rgba(0, 0, 0, .52);
+  --sh-btn-press: 1px 1px 0 rgba(0, 0, 0, .52);
+  --sh-chip: 2px 3px 0 rgba(0, 0, 0, .42);
+  --sh-chip-press: 1px 1px 0 rgba(0, 0, 0, .42);
+  --icon-drop: drop-shadow(3px 4px 0 rgba(0, 0, 0, .55));
+  /* 职业图标:不能 multiply(会糊成黑块); 暗底要提一点亮度才看得清纹章 */
   --member-blend: normal;
-  --member-filter: saturate(.82) brightness(1.05) contrast(.96);
-  --member-opacity: .9;
+  --member-filter: saturate(.95) brightness(1.14) contrast(1.02);
+  --member-opacity: .95;
 }
-/* 职能 wash:亮色同色相,略提 alpha */
-html[data-theme="dark"] .member.tank { --wash: rgba(110, 140, 176, .28); }
-html[data-theme="dark"] .member.heal { --wash: rgba(120, 150, 104, .26); }
-html[data-theme="dark"] .member.dps  { --wash: rgba(184, 116, 94, .24); }
+/* 职能 wash:暗底上同色相压深,像彩窗玻璃而不是荧光笔 */
+html[data-theme="dark"] .member.tank { --wash: rgba(86, 102, 126, .20); }
+html[data-theme="dark"] .member.heal { --wash: rgba(94, 116, 80, .19); }
+html[data-theme="dark"] .member.dps  { --wash: rgba(150, 84, 60, .22); }
+/* 头像纹章:白底 app 图标在近黑页面上是最刺眼的一块,压到烛光够得着的亮度 */
+html[data-theme="dark"] .brandIcon { filter: var(--icon-drop) brightness(.7) saturate(.84) contrast(1.04); }
+
+/* 卡片/浮层:顶边一道极淡的骨白高光,黑底上才有厚度,不然是一块死掉的深色矩形 */
+html[data-theme="dark"] .card { box-shadow: var(--sh-lg), inset 0 1px 0 rgba(238, 216, 172, .08); }
+html[data-theme="dark"] .sugg { box-shadow: var(--sh-lg), inset 0 1px 0 rgba(238, 216, 172, .08); }
+html[data-theme="dark"] dialog { box-shadow: var(--sh-xl), inset 0 1px 0 rgba(238, 216, 172, .09); }
+/* 标题:远处一盏烛的余晖 */
+html[data-theme="dark"] .brand h1 { text-shadow: 0 0 24px rgba(138, 32, 40, .46); }
+/* hover 时点一盏烛:暗底上光晕比换底色更像「被照到」。
+   ★ 必须排掉 .weekBar / .wipeTrack:它们也是 <button>,自己把 box-shadow 清成 none 了,
+   这条规则特异性更高会把方形按钮阴影糊回去(柱子上凸出一个方块就是这么来的)。 */
+html[data-theme="dark"] button:hover:not(.ghost):not(.chip):not(.weekBar):not(.wipeTrack) { box-shadow: var(--sh-btn), 0 0 17px rgba(146, 34, 42, .48); }
+html[data-theme="dark"] .ghost:hover { box-shadow: var(--sh-sm), 0 0 13px rgba(146, 34, 42, .38); }
+html[data-theme="dark"] .chip:hover  { box-shadow: var(--sh-chip), 0 0 13px rgba(146, 34, 42, .42); }
+html[data-theme="dark"] .chip.on     { box-shadow: var(--sh-chip), 0 0 15px rgba(146, 34, 42, .46); }
+/* 柱子=一排烛台,给它一圈烛光;灭点条同理 */
+/* 柱子/灭点条:玫瑰红的体块 + 一道烛光描边和外晕,才不是平铺的红方块 */
+html[data-theme="dark"] .weekPaint { filter: drop-shadow(0 0 6px rgba(140, 32, 40, .38)); }
+html[data-theme="dark"] .wipeSegG  { filter: drop-shadow(0 0 4px rgba(140, 32, 40, .32)); }
+html[data-theme="dark"] .weekPaint .inkline { stroke: rgba(198, 122, 126, .62); }
+html[data-theme="dark"] .wipeStrip .segInk  { stroke: rgba(198, 122, 126, .52); }
+/* 选中 chip:暗红牌子 + 比它亮一档的边,不要 rose-lit 那道亮粉描边(在近黑页面上就是霓虹管) */
+html[data-theme="dark"] .chip.on { border-color: #a04c52; color: var(--ink); }
