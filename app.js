@@ -1476,7 +1476,7 @@ renderChips();
   }
 })();
 
-const THEME_COLOR = { light: "#DBD3C6", dark: "#0F0C0A" };
+const THEME_COLOR = { light: "#D8D3CC", dark: "#0F0C0A" };
 $("#themeToggle").onclick = () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
@@ -1491,6 +1491,7 @@ $("#themeToggle").onclick = () => {
    尺寸变了(换语言、切副本)就按同一个种子重画,同一个按钮每次画出来都一样。 */
 const INK_PAD = 6;   // 画布比元素四周各大 6px,给出头的笔画留地方;CSS 里伪元素的 inset 要和它对上
 const INK_SEL = "button:not(.weekBar):not(.wipeTrack), .weekTip";
+const FOCUS_RING = 5;   // 键盘焦点那一圈离按钮 5px;CSS 里 :focus-visible 的 ::after inset -12.5px = 5 + INK_PAD + 1.5 边框
 
 function hashSeed(s) {
   let h = 2166136261;
@@ -1538,6 +1539,11 @@ function strokeOutline(pts, widths) {
 }
 
 function inkFrame(w, h, seed, weight) {
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${w + 2 * INK_PAD}' height='${h + 2 * INK_PAD}' viewBox='0 0 ${w + 2 * INK_PAD} ${h + 2 * INK_PAD}'>`
+    + `<path d='${inkFramePath(w, h, seed, weight)}'/></svg>`;
+}
+
+function inkFramePath(w, h, seed, weight) {
   const rnd = seededRand(seed), W = w + 2 * INK_PAD, H = h + 2 * INK_PAD;
   const r = Math.min(5, h / 7);
   const rr = roundRect(INK_PAD + .7 * rnd(), INK_PAD + .7 * rnd(), W - INK_PAD + .7 * rnd(), H - INK_PAD + .7 * rnd(),
@@ -1569,13 +1575,13 @@ function inkFrame(w, h, seed, weight) {
     const taper = Math.min(1, .55 + s / 6) * (.12 + .88 * Math.min(1, (len - s) / 14));
     ws.push(weight * land * taper * (1 + .07 * Math.max(0, nx + ny)) * (1 + .08 * Math.sin(s / 29 + ph[1])));
   }
-  return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}'>`
-    + `<path d='${strokeOutline(pts, ws)}'/></svg>`;
+  return strokeOutline(pts, ws);
 }
 
 /* 水彩涂色:一整片淡彩,不是线。形状比框往里收 2px 上下,边缘软、微微不齐;
-   颜料在边上积得深一点(水彩干了的那圈边),中间有大块的深浅不匀 */
-function inkFill(w, h, seed) {
+   颜料在边上积得深一点(水彩干了的那圈边),中间有大块的深浅不匀。
+   soft=true 是暗色用的一份:黑底上颜料淡的地方透出黑来,大块深浅不匀会读成污渍,所以不匀压到三成、积边收一点(平均浓度不变) */
+function inkFill(w, h, seed, soft) {
   const rnd = seededRand(seed + 17), W = w + 2 * INK_PAD, H = h + 2 * INK_PAD, f = v => v.toFixed(1);
   const x0 = INK_PAD + 1.8, y0 = INK_PAD + 1.8, x1 = W - INK_PAD - 1.8, y1 = H - INK_PAD - 1.8;
   const rr = roundRect(x0, y0, x1, y1, [0, 1, 2, 3].map(() => Math.min(4, h / 9) * (.6 + .6 * Math.abs(rnd()))));
@@ -1585,7 +1591,7 @@ function inkFill(w, h, seed) {
     const [x, y, nx, ny] = rr.at(s), o = 1.1 * Math.sin(s / 41 + ph[0]) + .3 * Math.sin(s / 13 + ph[1]);
     blob.push(f(x + nx * o) + " " + f(y + ny * o));
   }
-  const sd = seed % 997;
+  const sd = seed % 997, mot = soft ? .36 : 1.2, ring = soft ? .18 : .3;   // mot:浓淡随噪声变化的幅度,平均浓度都是 .55
   return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}'>`
     + `<filter id='w' color-interpolation-filters='sRGB'>`
     // 边缘:轻轻扰动一下再柔一点
@@ -1597,9 +1603,9 @@ function inkFill(w, h, seed) {
     + `<feComposite in='s' in2='b' operator='arithmetic' k2='1' k3='-1' result='ring'/>`
     // 大块的深浅不匀
     + `<feTurbulence type='fractalNoise' baseFrequency='.025 .05' numOctaves='2' seed='${sd + 7}' result='m'/>`
-    + `<feColorMatrix in='m' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.2 0 0 0 -.05' result='ma'/>`
+    + `<feColorMatrix in='m' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${mot} 0 0 0 ${(.55 - mot / 2).toFixed(2)}' result='ma'/>`
     + `<feComposite in='ma' in2='s' operator='in' result='wash'/>`
-    + `<feComposite in='wash' in2='ring' operator='arithmetic' k2='.75' k3='.3'/>`
+    + `<feComposite in='wash' in2='ring' operator='arithmetic' k2='.75' k3='${ring}'/>`
     + `</filter><path d='M${blob.join("L")}Z' filter='url(#w)'/></svg>`;
 }
 
@@ -1611,7 +1617,15 @@ function inkElement(el) {
   const weight = el.classList.contains("weekTip") ? 1.15 : el.classList.contains("chip") ? 1.3 : el.classList.contains("ghost") ? 1.4 : 1.8;
   const url = svg => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   el.style.setProperty("--ink-frame", url(inkFrame(w, h, seed, weight)));
-  if (!el.classList.contains("weekTip")) el.style.setProperty("--ink-fill", url(inkFill(w, h, seed)));
+  if (!el.classList.contains("weekTip")) {
+    el.style.setProperty("--ink-fill", url(inkFill(w, h, seed)));
+    el.style.setProperty("--ink-fill-soft", url(inkFill(w, h, seed, true)));
+    // 键盘焦点:按钮自己的框 + 外面 FOCUS_RING px 再绕一圈,拼成一张图(CSS 在 :focus-visible 时换上,整张用强调色)
+    const G = FOCUS_RING, W = w + 2 * G + 2 * INK_PAD, H = h + 2 * G + 2 * INK_PAD;
+    el.style.setProperty("--ink-focus", url(`<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}'>`
+      + `<path d='${inkFramePath(w + 2 * G, h + 2 * G, seed + 5, 1.3)}'/>`
+      + `<path transform='translate(${G} ${G})' d='${inkFramePath(w, h, seed, weight)}'/></svg>`));
+  }
   el.classList.add("inked");
 }
 

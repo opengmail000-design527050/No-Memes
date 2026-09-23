@@ -1,15 +1,15 @@
 @charset "UTF-8";
 /* No memes —— 桌上的几张纸:一张餐巾纸上写着查询,每个副本一页横线本。
- * 字全是手写的(英文数字 Kalam,中文霞鹜文楷);框是铅笔画了两遍的圆角方框;
+ * 字全是手写的(英文数字 Kalam,中文小赖字体);框是铅笔画了两遍的圆角方框;
  * 要紧的地方用陶土色彩铅涂一涂;分隔是随手的波浪线,标题底下拉一道弧线;图表是铅笔排线。
  * 纸是方正、平放的:不歪、不叠、不贴胶带。亮色里没有蓝色(横线本的横线也换成暖灰)。 */
 
 :root {
   color-scheme: light;
-  --desk: #DBD3C6;                      /* 桌面:暖灰米色 */
-  --napkin: #F8F1E0;                    /* 餐巾纸:和横线本同一种奶油色,只是没有横线 */
-  --sheet: #F8F1E0;                     /* 横线本:奶油色 */
-  --card: #FAF5E8;                      /* 浮层(建议列表/气泡) */
+  --desk: #D8D3CC;                      /* 桌面:暖灰米色(2026-09-23 黄压到原来的 6 成,亮度不变;原 #DBD3C6) */
+  --napkin: #F6F1E7;                    /* 餐巾纸:和横线本同一种米白,只是没有横线(原奶油色 #F8F1E0) */
+  --sheet: #F6F1E7;                     /* 横线本:米白 */
+  --card: #F9F5ED;                      /* 浮层(建议列表/气泡)(原 #FAF5E8) */
   --ink: #2d2925;
   --ink-soft: #756d63;
   --pencil: rgba(45, 41, 37, .8);       /* 铅笔描边 */
@@ -30,7 +30,7 @@
   --brush-green-2: rgba(150, 198, 128, .3);
   --brush-orange-1: rgba(214, 112, 79, .32);
   --brush-orange-2: rgba(236, 160, 130, .3);
-  --hand: "Kalam", "LXGW WenKai Screen", "Hannotate SC", "HanziPen SC", "Kaiti SC", serif;
+  --hand: "Kalam", "Xiaolai SC", "LXGW WenKai Screen", "Hannotate SC", "HanziPen SC", "Kaiti SC", serif;
   /* 笔迹素材都是 mask,颜色由背景色决定;笔画是有轻重的填充形状,不是等宽描边。纸纹/桌面纹理例外 */
   --swoosh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12' preserveAspectRatio='none'%3E%3Cpath d='M2.00 6.65 L4.45 6.77 L6.90 6.89 L9.34 7.00 L11.79 7.12 L14.24 7.24 L16.69 7.36 L19.14 7.47 L21.59 7.59 L24.04 7.71 L26.49 7.78 L28.95 7.80 L31.40 7.81 L33.85 7.82 L36.30 7.83 L38.75 7.83 L41.20 7.83 L43.65 7.82 L46.10 7.82 L48.55 7.81 L51.00 7.80 L53.45 7.78 L55.90 7.76 L58.35 7.74 L60.80 7.72 L63.25 7.70 L65.71 7.67 L68.16 7.65 L70.61 7.62 L73.06 7.59 L75.51 7.56 L77.96 7.53 L80.41 7.49 L82.86 7.46 L85.31 7.43 L87.76 7.40 L90.21 7.37 L92.66 7.34 L95.11 7.31 L97.56 7.28 L100.01 7.25 L102.46 7.22 L104.91 7.19 L107.36 7.17 L109.81 7.14 L112.26 7.11 L114.72 7.09 L117.17 7.07 L119.62 7.04 L122.07 7.02 L124.52 7.00 L126.97 6.98 L129.42 6.95 L131.87 6.89 L134.32 6.83 L136.77 6.76 L139.22 6.69 L141.67 6.62 L144.12 6.55 L146.57 6.47 L149.02 6.39 L151.47 6.31 L153.92 6.23 L156.37 6.14 L158.82 6.05 L161.27 5.96 L163.72 5.86 L166.17 5.76 L168.62 5.66 L171.07 5.56 L173.51 5.46 L175.96 5.35 L178.41 5.24 L180.86 5.13 L183.31 5.02 L185.76 4.91 L188.21 4.80 L190.66 4.68 L193.11 4.57 L195.56 4.45 L198.00 4.34 L198.00 4.06 L195.54 4.09 L193.09 4.11 L190.64 4.13 L188.19 4.15 L185.74 4.16 L183.29 4.18 L180.84 4.19 L178.39 4.21 L175.94 4.22 L173.49 4.23 L171.03 4.24 L168.58 4.25 L166.13 4.27 L163.68 4.28 L161.23 4.29 L158.78 4.30 L156.33 4.31 L153.88 4.33 L151.43 4.34 L148.98 4.36 L146.53 4.37 L144.08 4.39 L141.63 4.40 L139.18 4.42 L136.73 4.44 L134.28 4.45 L131.83 4.47 L129.38 4.48 L126.93 4.54 L124.48 4.59 L122.03 4.64 L119.58 4.68 L117.13 4.73 L114.68 4.77 L112.24 4.81 L109.79 4.84 L107.34 4.87 L104.89 4.90 L102.44 4.93 L99.99 4.95 L97.54 4.97 L95.09 4.99 L92.64 5.00 L90.19 5.01 L87.74 5.02 L85.29 5.03 L82.84 5.03 L80.39 5.03 L77.94 5.03 L75.49 5.03 L73.04 5.03 L70.59 5.02 L68.14 5.01 L65.69 5.01 L63.25 5.00 L60.80 4.99 L58.35 4.98 L55.90 4.97 L53.45 4.96 L51.00 4.95 L48.55 4.95 L46.10 4.94 L43.65 4.93 L41.20 4.92 L38.75 4.92 L36.30 4.91 L33.85 4.91 L31.40 4.91 L28.95 4.90 L26.51 4.90 L24.06 4.96 L21.61 5.06 L19.16 5.15 L16.71 5.24 L14.26 5.33 L11.81 5.42 L9.36 5.51 L6.90 5.59 L4.45 5.67 L2.00 5.75 Z'/%3E%3Cpath d='M14.00 8.84 L16.12 8.91 L18.25 8.98 L20.37 9.04 L22.50 9.11 L24.62 9.18 L26.75 9.25 L28.87 9.31 L31.00 9.38 L33.12 9.44 L35.25 9.49 L37.37 9.50 L39.50 9.51 L41.62 9.52 L43.75 9.52 L45.87 9.52 L48.00 9.53 L50.12 9.53 L52.25 9.52 L54.37 9.52 L56.50 9.52 L58.63 9.51 L60.75 9.50 L62.88 9.49 L65.00 9.48 L67.13 9.47 L69.25 9.45 L71.38 9.44 L73.50 9.43 L75.63 9.41 L77.75 9.39 L79.88 9.38 L82.00 9.36 L84.13 9.34 L86.25 9.32 L88.38 9.31 L90.50 9.29 L92.63 9.27 L94.75 9.25 L96.88 9.24 L99.00 9.22 L101.13 9.20 L103.25 9.18 L105.38 9.17 L107.51 9.15 L109.63 9.14 L111.76 9.12 L113.88 9.11 L116.01 9.09 L118.13 9.08 L120.26 9.06 L122.38 9.05 L124.51 9.03 L126.63 8.99 L128.76 8.96 L130.88 8.92 L133.01 8.88 L135.13 8.83 L137.26 8.79 L139.38 8.74 L141.51 8.70 L143.63 8.65 L145.76 8.60 L147.88 8.55 L150.01 8.49 L152.13 8.44 L154.26 8.38 L156.38 8.33 L158.51 8.27 L160.63 8.21 L162.76 8.14 L164.88 8.08 L167.01 8.02 L169.13 7.95 L171.25 7.88 L173.38 7.82 L175.50 7.75 L177.63 7.68 L179.75 7.61 L181.88 7.54 L184.00 7.47 L184.00 7.33 L181.87 7.35 L179.75 7.37 L177.62 7.38 L175.50 7.40 L173.37 7.41 L171.25 7.43 L169.12 7.44 L166.99 7.46 L164.87 7.47 L162.74 7.48 L160.62 7.49 L158.49 7.51 L156.37 7.52 L154.24 7.53 L152.12 7.54 L149.99 7.55 L147.87 7.57 L145.74 7.58 L143.62 7.59 L141.49 7.60 L139.37 7.61 L137.24 7.63 L135.12 7.64 L132.99 7.65 L130.87 7.67 L128.74 7.68 L126.62 7.69 L124.49 7.70 L122.37 7.73 L120.24 7.76 L118.12 7.79 L115.99 7.82 L113.87 7.85 L111.74 7.87 L109.62 7.89 L107.49 7.92 L105.37 7.93 L103.25 7.95 L101.12 7.97 L99.00 7.98 L96.87 7.99 L94.75 8.00 L92.62 8.01 L90.50 8.02 L88.37 8.03 L86.25 8.03 L84.12 8.03 L82.00 8.03 L79.87 8.03 L77.75 8.03 L75.62 8.03 L73.50 8.03 L71.37 8.02 L69.25 8.02 L67.12 8.01 L65.00 8.01 L62.87 8.00 L60.75 8.00 L58.62 7.99 L56.50 7.98 L54.38 7.98 L52.25 7.97 L50.13 7.97 L48.00 7.96 L45.88 7.96 L43.75 7.95 L41.63 7.95 L39.50 7.94 L37.38 7.94 L35.25 7.94 L33.13 7.96 L31.00 8.01 L28.88 8.06 L26.75 8.11 L24.63 8.15 L22.50 8.20 L20.38 8.24 L18.25 8.28 L16.13 8.32 L14.00 8.36 Z' opacity='.5'/%3E%3C/svg%3E");
   --squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='8' viewBox='0 0 22 8'%3E%3Cpath d='M-0.50 4.85 L-0.25 5.04 L0.01 5.23 L0.28 5.40 L0.55 5.58 L0.82 5.74 L1.09 5.89 L1.37 6.04 L1.65 6.17 L1.93 6.28 L2.22 6.39 L2.51 6.48 L2.79 6.55 L3.08 6.61 L3.37 6.66 L3.66 6.69 L3.94 6.70 L4.22 6.70 L4.50 6.69 L4.78 6.67 L5.05 6.64 L5.32 6.60 L5.59 6.55 L5.85 6.49 L6.11 6.43 L6.37 6.36 L6.63 6.29 L6.88 6.21 L7.14 6.13 L7.39 6.04 L7.64 5.95 L7.89 5.86 L8.14 5.77 L8.39 5.68 L8.65 5.59 L8.90 5.49 L9.15 5.39 L9.40 5.29 L9.65 5.19 L9.90 5.09 L10.15 4.98 L10.41 4.87 L10.66 4.76 L10.91 4.65 L11.17 4.53 L11.42 4.42 L11.68 4.30 L11.93 4.17 L12.19 4.05 L12.44 3.92 L12.70 3.80 L12.95 3.67 L13.21 3.54 L13.46 3.42 L13.71 3.30 L13.96 3.18 L14.22 3.06 L14.47 2.95 L14.71 2.84 L14.96 2.75 L15.20 2.66 L15.44 2.58 L15.68 2.51 L15.91 2.45 L16.14 2.40 L16.37 2.37 L16.59 2.35 L16.80 2.34 L17.01 2.35 L17.22 2.36 L17.43 2.39 L17.63 2.44 L17.84 2.49 L18.04 2.56 L18.25 2.64 L18.46 2.74 L18.67 2.84 L18.89 2.96 L19.11 3.10 L19.33 3.24 L19.56 3.39 L19.79 3.56 L20.02 3.73 L20.26 3.91 L20.50 4.09 L20.74 4.28 L20.99 4.47 L21.24 4.66 L21.49 4.85 L22.51 3.49 L22.26 3.30 L22.01 3.12 L21.76 2.93 L21.50 2.74 L21.24 2.56 L20.98 2.38 L20.71 2.20 L20.44 2.03 L20.17 1.86 L19.89 1.71 L19.61 1.57 L19.33 1.44 L19.04 1.33 L18.75 1.23 L18.46 1.15 L18.16 1.09 L17.87 1.05 L17.57 1.02 L17.28 1.02 L16.99 1.03 L16.70 1.06 L16.41 1.11 L16.13 1.18 L15.86 1.25 L15.59 1.34 L15.32 1.44 L15.06 1.56 L14.80 1.67 L14.54 1.80 L14.29 1.93 L14.03 2.07 L13.78 2.21 L13.54 2.35 L13.29 2.49 L13.04 2.63 L12.79 2.78 L12.55 2.92 L12.30 3.05 L12.06 3.19 L11.81 3.32 L11.57 3.45 L11.32 3.57 L11.08 3.69 L10.83 3.81 L10.59 3.92 L10.34 4.02 L10.09 4.12 L9.85 4.22 L9.60 4.31 L9.35 4.40 L9.10 4.49 L8.85 4.57 L8.60 4.65 L8.35 4.72 L8.11 4.79 L7.86 4.86 L7.61 4.93 L7.36 4.99 L7.11 5.05 L6.86 5.10 L6.62 5.15 L6.37 5.19 L6.13 5.23 L5.89 5.26 L5.65 5.29 L5.41 5.31 L5.18 5.33 L4.95 5.33 L4.72 5.33 L4.50 5.32 L4.28 5.30 L4.06 5.27 L3.84 5.23 L3.63 5.19 L3.42 5.13 L3.21 5.06 L2.99 4.99 L2.78 4.90 L2.57 4.80 L2.35 4.70 L2.13 4.58 L1.91 4.45 L1.68 4.31 L1.45 4.16 L1.22 4.00 L0.99 3.84 L0.75 3.66 L0.50 3.48 Z'/%3E%3C/svg%3E");
@@ -41,7 +41,7 @@
   /* 桌面的深浅斑驳:几块大的柔边光斑(不放进平铺瓦片——低频噪声一平铺就露接缝)+ 四周压一点边 */
   --vignette: radial-gradient(130% 100% at 50% 25%, transparent 55%, rgba(90, 74, 54, .16) 100%);
   --glow: rgba(255, 252, 244, .45);
-  --glow-2: rgba(246, 240, 228, .5);
+  --glow-2: rgba(244, 240, 233, .5);
   --glow-3: rgba(170, 150, 120, .14);
   --selection: rgba(236, 160, 130, .4);
   --danger: #b23a2b;
@@ -56,13 +56,14 @@
   --member-filter: saturate(.65) contrast(.95);
   --member-opacity: .9;
   --go-w: 116px;                        /* 「查询」按钮固定宽度:输入框底下那道铅笔线要让开它 */
+  --go-gap: 18px;                       /* 输入框和「查询」之间的空 */
 }
 
 * { box-sizing: border-box; }
 
 ::selection { background: var(--selection); }
 
-button:focus-visible, #q:focus-visible {
+button:focus-visible, #q:focus-visible {   /* JS 没画好框时的退路 */
   outline: 1.5px dashed var(--accent);
   outline-offset: 5px;
 }
@@ -192,6 +193,15 @@ button.inked::after {
   transition: background-color .15s;
 }
 button:hover { --fill-op: 1; }
+/* 键盘焦点:app.js 画的 --ink-focus = 按钮自己的框 + 外面 5px 再绕一圈,整张用强调色(和输入框选中时同一个颜色)。
+   inset -12.5px = 5px 那一圈 + 6px 画布余量 + 1.5px 透明边框 */
+button.inked:focus-visible { outline: none; }
+button.inked:focus-visible::after {
+  inset: -12.5px;
+  background: var(--accent);
+  -webkit-mask-image: var(--ink-focus);
+  mask-image: var(--ink-focus);
+}
 button:active { transform: translateY(1px); }
 /* 次要按钮=钢笔画的空框;悬停时淡淡刷一层墨色水彩 */
 button.ghost {
@@ -249,12 +259,12 @@ dialog,
 }
 
 /* 输入框=在一道铅笔线上写字 */
-.searchWrap { position: relative; display: flex; align-items: flex-end; gap: 18px; }
+.searchWrap { position: relative; display: flex; align-items: flex-end; gap: var(--go-gap); }
 .searchWrap::after {
   content: "";
   position: absolute;
   left: 0;
-  right: calc(var(--go-w) + 18px);
+  right: calc(var(--go-w) + var(--go-gap));
   bottom: -2px;
   height: 8px;
   background: var(--pencil-soft);
@@ -272,7 +282,7 @@ dialog,
   top: -12px;
   bottom: -12px;
   left: -12px;
-  right: calc(var(--go-w) + 18px - 12px);
+  right: calc(var(--go-w) + var(--go-gap) - 12px);
   background: var(--accent);
   -webkit-mask: var(--q-frame) 0 0 / 100% 100% no-repeat;
   mask: var(--q-frame) 0 0 / 100% 100% no-repeat;
@@ -346,7 +356,8 @@ dialog,
   padding-top: 26px;
 }
 #chips::before,
-footer::before {
+footer::before,
+#advBox summary::before {
   content: "";
   position: absolute;
   top: 0;
@@ -656,7 +667,10 @@ footer::before {
   stroke-linecap: round;
 }
 .weekPaint .zero { stroke-opacity: .45; }
-.weekBar:hover .weekPaint path, .weekBar.on .weekPaint path { stroke: var(--crayon); }
+.weekBar:hover .weekPaint path, .weekBar.on .weekPaint path,
+.weekBar:focus-visible .weekPaint path { stroke: var(--crayon); }
+.weekBar:focus-visible, .wipeTrack:focus-visible { outline: none; }
+.wipeTrack:focus-visible .wipeStrip path { stroke: var(--crayon); }
 .weekBar.pop .weekPaint { animation: week-pop .3s ease; }
 @keyframes week-pop {
   0%   { transform: scale(1, 1); }
@@ -668,7 +682,7 @@ footer::before {
 .weekTip {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--h) + 12px);
+  bottom: min(calc(var(--h) + 12px), 100%);   /* 柱子上方正好空着一行(30px),气泡高 29px,最多到那一行为止 */
   z-index: 2;
   padding: 3px 12px 4px;
   color: var(--ink);
@@ -924,9 +938,9 @@ dialog .row button.ghost { font-size: 15px; padding: 7px 16px 6px; }
 #advBox {
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1.3px dashed var(--pencil-soft);
 }
-#advBox summary { cursor: pointer; font-size: 15px; color: var(--ink-soft); margin-bottom: 12px; }
+#advBox summary { position: relative; cursor: pointer; font-size: 15px; color: var(--ink-soft); margin-bottom: 12px; }
+#advBox summary::before { top: -18px; }   /* 波浪线落在 details 顶上(原来那道虚线的位置) */
 #advBox summary:hover { color: var(--accent); }
 
 /* 大屏整页等比放大(设计基准≈笔记本 1440 宽);zoom 会放大 100vh,故 min-height 同步除回去,免得整页超一屏要下拉 */
@@ -951,9 +965,10 @@ dialog .row button.ghost { font-size: 15px; padding: 7px 16px 6px; }
   .brand h1 { font-size: 32px; }
   header { padding-top: 28px; }
   main { padding-left: 16px; padding-right: 16px; }
-  .napkin { padding: 28px 24px 22px; }
-  #q { font-size: 17px; }
-  :root { --go-w: 84px; }
+  .napkin { padding: 28px 20px 22px; }
+  #q { font-size: 17px; }                  /* 输入的字别小于 16px:iPhone 上会自动放大页面 */
+  #q::placeholder { font-size: 15px; }     /* 提示文字小一号,360 宽也放得下「角色名，或 角色名@服务器」 */
+  :root { --go-w: 76px; --go-gap: 12px; }
   #go { font-size: 16px; }
   button.ghost { font-size: 12px; padding: 5px 10px 6px; }
   .themeToggle .tw { font-size: 11px; }
@@ -964,6 +979,11 @@ dialog .row button.ghost { font-size: 15px; padding: 7px 16px 6px; }
   .card { --pad: 18px; }
   .weekBars, .weekDays { gap: 6px; }
   .weekBar { height: calc(var(--rl) * 3); }
+  /* 两头那两根柱子的气泡:居中会伸出纸边,改成贴着柱子外侧对齐 */
+  .weekBar:first-child .weekTip { left: 0; transform: translate(0, 4px); }
+  .weekBar:last-child .weekTip { left: auto; right: 0; transform: translate(0, 4px); }
+  .weekBar:first-child:hover .weekTip, .weekBar:first-child.on .weekTip,
+  .weekBar:last-child:hover .weekTip, .weekBar:last-child.on .weekTip { transform: none; }
   .weekTotal { white-space: normal; text-align: right; }
   .wipeTrack { max-width: 100%; }
   .party { grid-template-columns: repeat(2, minmax(0, 1fr)); }  /* 手机放不下 4 列,降为 2 列仍保持 T奶在前 */
@@ -1033,8 +1053,8 @@ html[data-theme="dark"] {
   --accent: var(--rose-lit);
   --danger: #e08a6b;                     /* 报错另留一支更亮的余烬,别和普通链接同色 */
   /* 彩铅高光:暗底上必须比字暗,否则字被盖住(亮色是反过来的) */
-  --brush-green-1: rgba(118, 146, 84, .5);
-  --brush-green-2: rgba(76, 96, 52, .3);
+  --brush-green-1: rgba(118, 146, 84, .36);   /* 绿是暗色里唯一不是玫瑰的颜色,排线再密就比玫瑰还抢眼,淡一档 */
+  --brush-green-2: rgba(76, 96, 52, .24);
   --brush-orange-1: rgba(194, 117, 122, .45);
   --brush-orange-2: rgba(140, 50, 52, .32);
   --desk-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
@@ -1061,5 +1081,11 @@ html[data-theme="dark"] {
   --member-opacity: .92;
 }
 /* 头像纹章:白底 app 图标在近黑页面上是最刺眼的一块,压到烛光够得着的亮度 */
-html[data-theme="dark"] .brandIcon { filter: brightness(.7) saturate(.84) contrast(1.04); }
+/* sepia 放在最后、再往回转 8°:底色落在 H31(和桌面、纸同一种暖褐)。sepia 放前面会偏到 H60 发绿,踩过 */
+html[data-theme="dark"] .brandIcon { filter: brightness(.64) saturate(.9) contrast(1.04) sepia(.28) hue-rotate(-8deg); }
+/* 水彩:黑底上颜料淡的地方透出黑来,大按钮上的深浅不匀会读成污渍,换成压匀的那份(app.js 的 inkFill soft) */
+html[data-theme="dark"] button.inked::before {
+  -webkit-mask-image: var(--ink-fill-soft);
+  mask-image: var(--ink-fill-soft);
+}
 html[data-theme="dark"] dialog { box-shadow: 0 2px 4px rgba(0, 0, 0, .4), 0 30px 60px -20px rgba(0, 0, 0, .8); }
