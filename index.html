@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#FBF6EB">
+<meta name="theme-color" content="#DBD3C6">
 <title>No memes</title>
 <link rel="shortcut icon" href="favicon.ico?v=2">
 <link rel="icon" type="image/png" href="icons/favicon.png?v=2">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>{const t=localStorage.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]').content=t==='dark'?'#0F0C0A':'#FBF6EB'}</script>
+<script>{const t=localStorage.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]').content=t==='dark'?'#0F0C0A':'#DBD3C6'}</script>
+<link rel="stylesheet" href="fonts/kalam.css">
 <link rel="stylesheet" href="fonts/lxgwwenkaiscreen.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -30,14 +31,16 @@
 </header>
 
 <main>
-  <div class="searchWrap">
-    <input id="q" placeholder="角色名，或 角色名@服务器" autocomplete="off" spellcheck="false">
-    <button id="go">查询</button>
-    <div id="sugg" class="sugg hidden"></div>
-  </div>
-  <div class="searchHint">基于 FF Logs 的公开数据，上传了才能查到。查不到不等于没打</div>
+  <section class="napkin">
+    <div class="searchWrap">
+      <input id="q" placeholder="角色名，或 角色名@服务器" autocomplete="off" spellcheck="false">
+      <button id="go">查询</button>
+      <div id="sugg" class="sugg hidden"></div>
+    </div>
+    <div class="searchHint">基于 FF Logs 的公开数据，上传了才能查到。查不到不等于没打</div>
 
-  <div id="chips" class="chips"></div>
+    <div id="chips" class="chips"></div>
+  </section>
 
   <section id="result"></section>
 </main>

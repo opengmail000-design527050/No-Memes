@@ -769,7 +769,7 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   if (pull?.job) metaParts.push(jobName(pull.job));
   if (pull?.timeMs) metaParts.push(fmtCST(pull.timeMs));
   const badge = el("span", "status " + statusCls);
-  badge.appendChild(brushStroke(pull?.timeMs || 1, statusCls === "clear" ? null : "--brush-orange"));
+  badge.appendChild(brushStroke(pull?.timeMs || 1, statusCls === "clear" ? null : "--brush-orange", parts.join(" · ")));
   badge.appendChild(el("span", "badgeTxt", parts.join(" · ")));
   line.appendChild(badge);
   if (extraWhen) whenParts.push(extraWhen);
@@ -790,15 +790,26 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   return card;
 }
 
-/* 头部徽章的笔刷底:上下平行、微微错开的两笔半透明水彩(交叠处自然加深),
-   viewBox 拉伸铺满徽章,随文字长短自适应 */
-function brushStroke(seed, brush) {
+/* 状态词底下用彩铅涂一道:一层很淡的底色 + 来回的短斜线,两头涂得参差不齐。
+   viewBox 宽度按字数估出来,和实际尺寸接近 1:1,斜线不会被横向拉歪;铺满徽章仍靠 preserveAspectRatio=none */
+function brushStroke(seed, brush, text) {
   const prefix = brush || "--brush-green";
   const rnd = seededRand(seed);
-  const svg = svgEl("svg", { class: "badgeBrush", viewBox: "0 0 120 30", preserveAspectRatio: "none", "aria-hidden": "true" });
-  svgEl("path", { d: wobPath(barPts(2, 3, 110, 16, 7, 6), 2.4, true, rnd), fill: `var(${prefix}-1)`, transform: "rotate(-.6 57 11)" }, svg);
-  svgEl("path", { d: wobPath(barPts(8, 12, 108, 15, 6, 5), 2.6, true, rnd), fill: `var(${prefix}-2)`, transform: "rotate(.8 62 20)" }, svg);
+  const W = Math.max(40, [...(text || "")].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e80 ? 15 : 8), 22));
+  const H = 28;
+  const svg = svgEl("svg", { class: "badgeBrush", viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true" });
+  svgEl("path", { d: markerPath(1, W - 1, 5 + rnd() * .6, H - 3 + rnd() * .5, 4, rnd), fill: `var(${prefix}-2)` }, svg);
+  svgEl("path", { d: hatchPath(3, 4, W - 6, H - 7, 3, rnd), class: "crayon", stroke: `var(${prefix}-1)` }, svg);
   return svg;
+}
+
+/* 马克笔的一笔:上下边几乎是直的(只有纸面带来的细小毛边),左右两端平行斜切 */
+function markerPath(x0, x1, y0, y1, slant, rnd) {
+  const n = Math.max(2, Math.round((x1 - x0) / 12));
+  const pts = [];
+  for (let i = 0; i <= n; i++) pts.push([x0 + slant + (x1 - x0 - slant) * i / n, y0 + rnd() * .35]);
+  for (let i = n; i >= 0; i--) pts.push([x0 + (x1 - x0 - slant) * i / n, y1 + rnd() * .35]);
+  return "M" + pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join("L") + "Z";
 }
 
 // ID 右边的「已通关 · 职业 · 首通日期」徽章,点击跳首通 log
@@ -811,8 +822,9 @@ function clearBadge(row) {
     const md = fmtCST(row.firstMs).slice(0, 5);
     date = y === new Date(Date.now() + CST_OFFSET_MS).getUTCFullYear() ? md : `${y}-${md}`;
   }
-  a.appendChild(brushStroke(row.firstMs || 1));
-  a.appendChild(el("span", "badgeTxt", [tr("已通关", "Cleared"), jobName(row.job), date].filter(Boolean).join(" · ")));
+  const text = [tr("已通关", "Cleared"), jobName(row.job), date].filter(Boolean).join(" · ");
+  a.appendChild(brushStroke(row.firstMs || 1, null, text));
+  a.appendChild(el("span", "badgeTxt", text));
   return a;
 }
 
@@ -910,10 +922,42 @@ function wobPath(pts, amp, close, rnd) {
   return d + "L" + f(s[s.length - 1][0]) + "," + f(s[s.length - 1][1]);
 }
 
-/* 上圆下方的八边形轮廓,切角经抖动+曲线自然磨圆 */
-function barPts(x, y, w, h, tc, bc) {
-  return [[x, y + tc], [x + tc, y], [x + w - tc, y], [x + w, y + tc],
-          [x + w, y + h - bc], [x + w - bc, y + h], [x + bc, y + h], [x, y + h - bc]];
+/* 钢笔的一笔直线:没用尺子,中段微微鼓出去一点、一路轻微抖;两端各随手出头一点(手画的方框角上总会交叉) */
+function penStroke(x1, y1, x2, y2, rnd, over = 0, amp = .6) {
+  const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+  const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+  const o1 = over * (.3 + .7 * Math.abs(rnd())), o2 = over * (.3 + .7 * Math.abs(rnd()));
+  const bow = rnd() * Math.min(1.5, len / 60);
+  return wobPath([[x1 - ux * o1 + rnd() * .4, y1 - uy * o1 + rnd() * .4],
+                  [(x1 + x2) / 2 - uy * bow, (y1 + y2) / 2 + ux * bow],
+                  [x2 + ux * o2 + rnd() * .4, y2 + uy * o2 + rnd() * .4]], amp, false, rnd);
+}
+
+/* 钢笔画的方框:四条边各自一笔、角上出头;bottom=false 时不画底边(柱子立在基线上) */
+function sketchBox(x, y, w, h, rnd, over, bottom = true) {
+  let d = penStroke(x, y + h, x, y, rnd, over) + penStroke(x, y, x + w, y, rnd, over)
+        + penStroke(x + w, y, x + w, y + h, rnd, over);
+  if (bottom) d += penStroke(x + w, y + h, x, y + h, rnd, over);
+  return d;
+}
+
+/* 斜线排线:在方框里画一组大致平行的斜线,比 45° 稍陡(手腕自然的角度)。
+   手排的线不齐:每根角度差一点、间距忽疏忽密、两头有的没够到边有的冲出去一点、线身微微弯。
+   flip=true 反方向,叠一层就是交叉排线 */
+function hatchPath(x, y, w, h, gap, rnd, flip) {
+  const f = v => v.toFixed(1);
+  let d = "";
+  for (let c = x - h / 1.35 + gap * (.3 + .5 * Math.abs(rnd())); c < x + w; c += gap * (.75 + .5 * Math.abs(rnd()))) {
+    const k = 1.35 * (1 + rnd() * .07);
+    const t0 = Math.max(-.6, Math.max(0, (x - c) * k) + Math.abs(rnd()) * 1.8 - .5);
+    const t1 = Math.min(h + .6, Math.min(h, (x + w - c) * k) - Math.abs(rnd()) * 1.8 + .5);
+    if (t1 - t0 < 1.2) continue;
+    let ax = c + t0 / k, bx = c + t1 / k;
+    if (flip) { ax = 2 * x + w - ax; bx = 2 * x + w - bx; }
+    const ay = y + h - t0, by = y + h - t1, bend = rnd() * .5;
+    d += `M${f(ax)},${f(ay)}Q${f((ax + bx) / 2 + bend)},${f((ay + by) / 2 + bend)} ${f(bx)},${f(by)}`;
+  }
+  return d;
 }
 
 function svgEl(tag, attrs, parent) {
@@ -923,8 +967,8 @@ function svgEl(tag, attrs, parent) {
   return e;
 }
 
-/* 比例分段的灭点色带:段长∝次数,颜色按在场 P 数从浅到深自适应。
-   数字全部写在色带下方当轴注记(块内无字);和左邻打架的注记降一行用引线避让 */
+/* 比例分段的灭点条:段长∝次数,每段是钢笔方框+排线,排线按在场 P 数从疏到密(最后几段交叉排线)。
+   数字全部写在条下方当轴注记(块内无字);和左邻打架的注记降一行用引线避让 */
 function wipeStrip(entries, W, H, rnd) {
   const total = entries.reduce((n, [, c]) => n + c, 0);
   const k = entries.length;
@@ -935,7 +979,8 @@ function wipeStrip(entries, W, H, rnd) {
   entries.forEach(([p, n], i) => {
     /* ponytail: 最小段宽会让总宽略超出 W,溢出几像素无感,不做归一化 */
     const w = Math.max(10, usable * n / total);
-    segs.push({ p, n, x, w, cx: x + w / 2, alpha: k === 1 ? .45 : .16 + .56 * i / (k - 1) });
+    const t = k === 1 ? .5 : i / (k - 1);   // 0=最早的 P,1=最远的 P
+    segs.push({ p, n, x, w, cx: x + w / 2, gap: 6.5 - 3.8 * t, cross: k >= 3 && t > .7 });
     x += w + gap;
   });
 
@@ -947,9 +992,9 @@ function wipeStrip(entries, W, H, rnd) {
   const svg = svgEl("svg", { class: "wipeStrip", width: W, height, viewBox: `0 0 ${W} ${height}` });
   for (const s of segs) {
     const g = svgEl("g", { class: "wipeSegG" }, svg);
-    const pts = barPts(s.x, 1, s.w, H - 2, Math.min(5, s.w * .3), Math.min(4, s.w * .25));
-    svgEl("path", { d: wobPath(pts, 1.1, true, rnd), fill: "var(--wipe-fill)", "fill-opacity": s.alpha.toFixed(2) }, g);
-    svgEl("path", { d: wobPath(pts, .9, true, rnd), class: "segInk" }, g);
+    svgEl("rect", { x: s.x, y: 1, width: s.w, height: H - 2, class: "segHit" }, g);   // 排线之间的空隙也要能点到
+    svgEl("path", { d: hatchPath(s.x, 2, s.w, H - 4, s.gap, rnd) + (s.cross ? hatchPath(s.x, 2, s.w, H - 4, s.gap * 1.3, rnd, true) : ""), class: "segHatch" }, g);
+    svgEl("path", { d: sketchBox(s.x, 1, s.w, H - 2, rnd, 1.6), class: "segInk" }, g);
     const label = `P${s.p}×${s.n}`;
     const half = lw(s) / 2;
     if (s.w >= lw(s) + 6) {
@@ -974,7 +1019,7 @@ function wipeDistribution(stat) {
   const track = el("button", "wipeTrack");
   track.type = "button";
   track.setAttribute("aria-label", tr("灭点分布:", "Wipes by phase: ") + phaseText(stat.wipes));
-  track.appendChild(wipeStrip(entries, 250, 18, seededRand(stat.ms + stat.pulls)));
+  track.appendChild(wipeStrip(entries, 300, 22, seededRand(stat.ms + stat.pulls)));
   track.onclick = e => {
     const g = e.target.closest(".wipeSegG");
     if (!g) return;
@@ -1001,18 +1046,20 @@ function weeklyChart(stat) {
     const bar = el("button", "weekBar");
     bar.type = "button";
     bar.style.setProperty("--h", `${d.ms ? Math.max(8, d.ms / max * 100) : 3}%`);
-    bar.style.setProperty("--tilt", `${(rnd() * 1.2).toFixed(2)}deg`);
     bar.setAttribute("aria-label", tr(`${d.label}，${d.pulls} 把，${durationText(d.ms)}，${phaseText(d.wipes)}`,
       `${d.label}, ${d.pulls} pulls, ${durationText(d.ms)}, ${phaseText(d.wipes)}`));
 
     const paint = svgEl("svg", { class: "weekPaint", viewBox: "0 0 100 104", preserveAspectRatio: "none", "aria-hidden": "true" });
-    const h = d.ms ? Math.max(8, d.ms / max * 96) : 3;
-    const x = 19, w = 62, top = 102 - h;
-    const tc = Math.min(11, h * .55), bc = Math.min(3.5, h * .2);
-    const pts = barPts(x, top, w, h, tc, bc);
-    svgEl("path", { d: wobPath(pts, 1.6, true, rnd), class: "wash1" }, paint);
-    if (h > 14) svgEl("path", { d: wobPath(barPts(x + 3, top + 3, w - 5, h - 5, tc, bc), 1.8, true, rnd), class: "wash2" }, paint);
-    svgEl("path", { d: wobPath(pts, 1, true, rnd), class: "inkline" }, paint);
+    /* 铅笔画的柱子:三条边各一笔(底边就是基线),里面斜线排线;悬停/选中时再用彩铅反方向涂一遍 */
+    const x = 21, w = 58;
+    if (d.ms) {
+      const h = Math.max(8, d.ms / max * 96), top = 102 - h;
+      svgEl("path", { d: hatchPath(x + 1, top + 1.5, w - 2, h - 1.5, 3.4, rnd, true), class: "hl" }, paint);
+      svgEl("path", { d: hatchPath(x + 1, top + 1.5, w - 2, h - 1.5, 5, rnd), class: "hatch" }, paint);
+      svgEl("path", { d: sketchBox(x, top, w, h, rnd, 2.6, false), class: "inkline" }, paint);
+    } else {
+      svgEl("path", { d: penStroke(x + w * .3, 100.5, x + w * .7, 100, rnd), class: "inkline zero" }, paint);   // 没打的那天:一小横
+    }
     bar.appendChild(paint);
 
     const tip = el("span", "weekTip");
@@ -1035,7 +1082,7 @@ function weeklyChart(stat) {
   wrap.appendChild(bars);
 
   const baseline = svgEl("svg", { class: "weekBase", viewBox: "0 0 600 8", preserveAspectRatio: "none", "aria-hidden": "true" });
-  svgEl("path", { d: wobPath([[2, 4], [598, 3.5]], 1.4, false, seededRand(stat.days[0].key / DAY_MS + 7)) }, baseline);
+  svgEl("path", { d: penStroke(4, 4, 596, 3.4, seededRand(stat.days[0].key / DAY_MS + 7), 3, .7) }, baseline);
   wrap.appendChild(baseline);
   wrap.appendChild(labels);
 
@@ -1432,10 +1479,212 @@ renderChips();
   }
 })();
 
-const THEME_COLOR = { light: "#FBF6EB", dark: "#0F0C0A" };
+const THEME_COLOR = { light: "#DBD3C6", dark: "#0F0C0A" };
 $("#themeToggle").onclick = () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   localStorage.theme = next;
   document.querySelector('meta[name="theme-color"]').content = THEME_COLOR[next];
 };
+
+/* ============ 手绘框:按钮/气泡的边框和水彩涂色,都按实际尺寸现画 ============
+   每个元素画两张 mask(SVG),挂在 CSS 变量 --ink-frame / --ink-fill 上:::after 显示钢笔框,::before 显示水彩涂色;
+   颜色仍由 CSS 决定,换主题不用重画。框是字写得好的人一笔画下来的:线稳,角收得紧(小圆角),
+   边只是微微不直(每条边一道很缓的弧),收笔越过起笔一小截、稍稍错开一点再收尖。
+   尺寸变了(换语言、切副本)就按同一个种子重画,同一个按钮每次画出来都一样。 */
+const INK_PAD = 6;   // 画布比元素四周各大 6px,给出头的笔画留地方;CSS 里伪元素的 inset 要和它对上
+const INK_SEL = "button:not(.weekBar):not(.wipeTrack), .weekTip";
+
+function hashSeed(s) {
+  let h = 2166136261;
+  for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0) % 2147483646 + 1;
+}
+
+/* 圆角矩形的周长参数化:at(s) 给出周长上第 s 像素处的点和朝外的法线(从上边偏左开始、顺时针)。
+   四个角各给一个半径 [左上, 右上, 右下, 左下]——手画的框四个角不会一样圆 */
+function roundRect(x0, y0, x1, y1, radii) {
+  const [a, b, c, d] = radii.map(r => Math.max(1, r));
+  const segs = [   // [长度, s→点] 依次:上边、右上角、右边、右下角、下边、左下角、左边、左上角
+    [x1 - x0 - a - b, s => [x0 + a + s, y0, 0, -1]],
+    [Math.PI * b / 2, s => arc(x1 - b, y0 + b, b, -Math.PI / 2 + s / b)],
+    [y1 - y0 - b - c, s => [x1, y0 + b + s, 1, 0]],
+    [Math.PI * c / 2, s => arc(x1 - c, y1 - c, c, s / c)],
+    [x1 - x0 - c - d, s => [x1 - c - s, y1, 0, 1]],
+    [Math.PI * d / 2, s => arc(x0 + d, y1 - d, d, Math.PI / 2 + s / d)],
+    [y1 - y0 - d - a, s => [x0, y1 - d - s, -1, 0]],
+    [Math.PI * a / 2, s => arc(x0 + a, y0 + a, a, Math.PI + s / a)],
+  ];
+  function arc(cx, cy, r, t) { return [cx + r * Math.cos(t), cy + r * Math.sin(t), Math.cos(t), Math.sin(t)]; }
+  const P = segs.reduce((n, g) => n + g[0], 0);
+  const start = segs.map((_, i) => segs.slice(0, i).reduce((n, g) => n + g[0], 0));   // 每段起点的弧长
+  const at = s => {
+    s = ((s % P) + P) % P;
+    for (const [len, fn] of segs) { if (s < len) return fn(s); s -= len; }
+    return segs[0][1](0);
+  };
+  return { P, start, at };
+}
+
+/* 沿中心线按每点的笔宽往两侧偏,围成一个填充多边形——线才有轻重,不是一根等宽的描边 */
+function strokeOutline(pts, widths) {
+  const L = [], R = [], f = v => v.toFixed(1);
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let nx = a[1] - b[1], ny = b[0] - a[0];
+    const n = Math.hypot(nx, ny) || 1, hw = widths[i] / 2;
+    nx /= n; ny /= n;
+    L.push(f(pts[i][0] + nx * hw) + " " + f(pts[i][1] + ny * hw));
+    R.push(f(pts[i][0] - nx * hw) + " " + f(pts[i][1] - ny * hw));
+  }
+  return "M" + L.concat(R.reverse()).join("L") + "Z";
+}
+
+function inkFrame(w, h, seed, weight) {
+  const rnd = seededRand(seed), W = w + 2 * INK_PAD, H = h + 2 * INK_PAD;
+  const r = Math.min(5, h / 7);
+  const rr = roundRect(INK_PAD + .7 * rnd(), INK_PAD + .7 * rnd(), W - INK_PAD + .7 * rnd(), H - INK_PAD + .7 * rnd(),
+    [0, 1, 2, 3].map(() => r * (.55 + .6 * Math.abs(rnd()))));
+  // 每条边一道很缓的弧(中段鼓出或凹进不到 1px,角上归零),整圈再叠一道极长的波:线是稳的,只是不像尺子拉的
+  const bows = [0, 1, 2, 3].map(() => 1.1 * rnd()), ph = [0, 1].map(() => rnd() * 6);
+  const bend = s => {
+    const q = ((s % rr.P) + rr.P) % rr.P;
+    let b = 0;
+    for (let i = 0; i < 8; i += 2) {
+      const a = rr.start[i], L = rr.start[i + 1] - a;
+      if (q >= a && q < a + L) b = bows[i / 2] * Math.sin(Math.PI * (q - a) / L);
+    }
+    return b + .3 * Math.sin(q / rr.P * 12.566 + ph[0]);
+  };
+  const top = rr.start[1] - rr.start[0];
+  const s0 = top * (.12 + .25 * Math.abs(rnd()));               // 从上边偏左落笔
+  const over = 9 + 7 * Math.abs(rnd());                          // 收笔越过起笔一小截
+  const len = rr.P + over;
+  const drift = 1.2 + .6 * Math.abs(rnd());                       // 那一截往外错开一点,和起笔不完全重合
+  const pts = [], ws = [];
+  for (let s = 0; s <= len; s += 2) {
+    const [x, y, nx, ny] = rr.at(s0 + s);
+    const k = Math.max(0, 1 - (len - s) / (over + 24));          // 最后一段才开始错开
+    const off = bend(s0 + s) + drift * k * k;
+    pts.push([x + nx * off, y + ny * off]);
+    // 落笔先压一下(稍粗),中段稳,收笔在最后十几像素收尖
+    const land = 1 + .18 * Math.max(0, 1 - s / 8);
+    const taper = Math.min(1, .55 + s / 6) * (.12 + .88 * Math.min(1, (len - s) / 14));
+    ws.push(weight * land * taper * (1 + .07 * Math.max(0, nx + ny)) * (1 + .08 * Math.sin(s / 29 + ph[1])));
+  }
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}'>`
+    + `<path d='${strokeOutline(pts, ws)}'/></svg>`;
+}
+
+/* 水彩涂色:一整片淡彩,不是线。形状比框往里收 2px 上下,边缘软、微微不齐;
+   颜料在边上积得深一点(水彩干了的那圈边),中间有大块的深浅不匀 */
+function inkFill(w, h, seed) {
+  const rnd = seededRand(seed + 17), W = w + 2 * INK_PAD, H = h + 2 * INK_PAD, f = v => v.toFixed(1);
+  const x0 = INK_PAD + 1.8, y0 = INK_PAD + 1.8, x1 = W - INK_PAD - 1.8, y1 = H - INK_PAD - 1.8;
+  const rr = roundRect(x0, y0, x1, y1, [0, 1, 2, 3].map(() => Math.min(4, h / 9) * (.6 + .6 * Math.abs(rnd()))));
+  const ph = [rnd() * 6, rnd() * 6];
+  const blob = [];
+  for (let s = 0; s < rr.P; s += 3) {
+    const [x, y, nx, ny] = rr.at(s), o = 1.1 * Math.sin(s / 41 + ph[0]) + .3 * Math.sin(s / 13 + ph[1]);
+    blob.push(f(x + nx * o) + " " + f(y + ny * o));
+  }
+  const sd = seed % 997;
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}'>`
+    + `<filter id='w' color-interpolation-filters='sRGB'>`
+    // 边缘:轻轻扰动一下再柔一点
+    + `<feTurbulence type='fractalNoise' baseFrequency='.09' numOctaves='2' seed='${sd}' result='e'/>`
+    + `<feDisplacementMap in='SourceGraphic' in2='e' scale='1.6' xChannelSelector='R' yChannelSelector='G' result='d'/>`
+    + `<feGaussianBlur in='d' stdDeviation='.5' result='s'/>`
+    // 积在边上的那圈:形状减去自己的模糊,只剩贴边往里几像素
+    + `<feGaussianBlur in='d' stdDeviation='3.5' result='b'/>`
+    + `<feComposite in='s' in2='b' operator='arithmetic' k2='1' k3='-1' result='ring'/>`
+    // 大块的深浅不匀
+    + `<feTurbulence type='fractalNoise' baseFrequency='.025 .05' numOctaves='2' seed='${sd + 7}' result='m'/>`
+    + `<feColorMatrix in='m' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.2 0 0 0 -.05' result='ma'/>`
+    + `<feComposite in='ma' in2='s' operator='in' result='wash'/>`
+    + `<feComposite in='wash' in2='ring' operator='arithmetic' k2='.75' k3='.3'/>`
+    + `</filter><path d='M${blob.join("L")}Z' filter='url(#w)'/></svg>`;
+}
+
+function inkElement(el) {
+  const w = el.offsetWidth, h = el.offsetHeight;
+  if (!w || !h || el._inkSize === w + "x" + h) return;
+  el._inkSize = w + "x" + h;
+  const seed = hashSeed((el.id || "") + "|" + el.textContent);
+  const weight = el.classList.contains("weekTip") ? 1.15 : el.classList.contains("chip") ? 1.3 : el.classList.contains("ghost") ? 1.4 : 1.8;
+  const url = svg => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  el.style.setProperty("--ink-frame", url(inkFrame(w, h, seed, weight)));
+  if (!el.classList.contains("weekTip")) el.style.setProperty("--ink-fill", url(inkFill(w, h, seed)));
+  el.classList.add("inked");
+}
+
+/* ============ 纸边:餐巾纸和横线本的四条边不是尺子裁出来的 ============
+   和手绘框一样按实际尺寸画一张 mask,挂在 --paper-edge 上(CSS 里纸挪到 ::before 显示)。
+   每条边往外毛出 0~1.6px:几百像素一道的缓弯 + 几十像素的小波 + 逐点的毛刺,偶尔一个小缺口;
+   四个角有的方、有的磨掉一点。都很浅,凑近了才看得出不齐 */
+const EDGE_PAD = 2;   // 和 CSS 里 ::before 的 inset: -2px 对上
+const EDGE_SEL = ".napkin, .card";
+
+function paperEdge(w, h, seed) {
+  const rnd = seededRand(seed), f = v => v.toFixed(1);
+  const x0 = EDGE_PAD, y0 = EDGE_PAD, x1 = w + EDGE_PAD, y1 = h + EDGE_PAD;
+  // 一条边:从 (ax,ay) 沿 (dx,dy) 走 L 像素,(nx,ny) 朝纸外;记下首尾的外扩量,拼角用
+  function side(ax, ay, dx, dy, L, nx, ny) {
+    const l1 = 160 + 260 * Math.abs(rnd()), l2 = 22 + 40 * Math.abs(rnd()), p1 = rnd() * 6, p2 = rnd() * 6;
+    const nicks = [];   // [位置, 半宽, 深度]
+    for (let k = Math.round(L / 320 * Math.abs(rnd()) + .3); k > 0; k--)
+      nicks.push([L * Math.abs(rnd()), 3 + 5 * Math.abs(rnd()), .4 + .35 * Math.abs(rnd())]);
+    const n = Math.max(2, Math.round(L / 3)), pts = [], offs = [];
+    let fuzz = 0;
+    for (let i = 0; i <= n; i++) {
+      const t = L * i / n;
+      fuzz = .5 * fuzz + .12 * rnd();   // 毛刺:相邻两点连着,不是锯齿
+      let o = .75 + .4 * Math.sin(t / l1 * 6.28 + p1) + .2 * Math.sin(t / l2 * 6.28 + p2) + fuzz;
+      for (const [c, r, dep] of nicks) o -= dep * Math.exp(-(((t - c) / r) ** 2));
+      o = Math.min(1.6, Math.max(0, o));
+      offs.push(o);
+      pts.push([ax + dx * t + nx * o, ay + dy * t + ny * o]);
+    }
+    return { pts, a: offs[0], b: offs[n], nx, ny };
+  }
+  const sides = [
+    side(x0, y0, 1, 0, w, 0, -1),    // 上
+    side(x1, y0, 0, 1, h, 1, 0),     // 右
+    side(x1, y1, -1, 0, w, 0, 1),    // 下
+    side(x0, y1, 0, -1, h, -1, 0),   // 左
+  ];
+  const corners = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  const out = [];
+  sides.forEach((s, i) => {
+    // 角:前一条边收尾和这条边起头的外扩量合起来;k<1 就是角被磨掉一点
+    const p = sides[(i + 3) % 4], k = .5 + .5 * Math.abs(rnd());
+    out.push([corners[i][0] + (p.nx * p.b + s.nx * s.a) * k, corners[i][1] + (p.ny * p.b + s.ny * s.a) * k]);
+    out.push(...s.pts);
+  });
+  const W = w + 2 * EDGE_PAD, H = h + 2 * EDGE_PAD;
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}' preserveAspectRatio='none'>`
+    + `<path d='M${out.map(q => f(q[0]) + " " + f(q[1])).join("L")}Z'/></svg>`;
+}
+
+function edgeElement(el) {
+  const w = el.offsetWidth, h = el.offsetHeight;
+  if (!w || !h || el._inkSize === w + "x" + h) return;
+  el._inkSize = w + "x" + h;
+  const seed = hashSeed(el.querySelector(".boss")?.textContent || "napkin");   // 同一张纸每次毛边一样
+  el.style.setProperty("--paper-edge", `url("data:image/svg+xml,${encodeURIComponent(paperEdge(w, h, seed))}")`);
+  el.classList.add("edged");
+}
+
+// 按钮/气泡的框和纸边共用一套观察:尺寸一变(首次 observe 也算)就重画
+const inkRO = new ResizeObserver(entries => entries.forEach(e => (e.target.matches(EDGE_SEL) ? edgeElement : inkElement)(e.target)));
+function inkScan(node, fn) {
+  if (node.nodeType !== 1) return;
+  const sel = INK_SEL + ", " + EDGE_SEL;
+  if (node.matches(sel)) fn(node);
+  node.querySelectorAll(sel).forEach(fn);
+}
+inkScan(document.body, el => inkRO.observe(el));
+new MutationObserver(ms => ms.forEach(m => {
+  m.addedNodes.forEach(n => inkScan(n, el => inkRO.observe(el)));
+  m.removedNodes.forEach(n => inkScan(n, el => inkRO.unobserve(el)));
+})).observe(document.body, { childList: true, subtree: true });

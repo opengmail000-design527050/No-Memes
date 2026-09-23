@@ -1,69 +1,61 @@
 @charset "UTF-8";
-/* No memes —— 手绘水彩绘本风:奶油纸底、手写字、歪歪扭扭的手绘框 */
-/* ponytail: 插画(莫古力/城堡/云)是真实绘画素材,CSS 只用渐变意会;想要真插画需另备 PNG 素材 */
+/* No memes —— 桌上的几张纸:一张餐巾纸上写着查询,每个副本一页横线本。
+ * 字全是手写的(英文数字 Kalam,中文霞鹜文楷);框是铅笔画了两遍的圆角方框;
+ * 要紧的地方用陶土色彩铅涂一涂;分隔是随手的波浪线,标题底下拉一道弧线;图表是铅笔排线。
+ * 纸是方正、平放的:不歪、不叠、不贴胶带。亮色里没有蓝色(横线本的横线也换成暖灰)。 */
 
 :root {
   color-scheme: light;
-  --paper: #FBF6EB;                     /* 真·奶油纸(原来的 #FFFAFA 是雪白偏粉,和顶部暖光对不上) */
-  --card: #FFFCF5;
-  --ink: #3a3226;
-  --ink-soft: #6e644f;
-  --line: rgba(58, 50, 38, .8);        /* 手绘描边 */
-  --line-soft: rgba(58, 50, 38, .45);
-  --gold: #e2b64c;
-  --accent: #cc6e64;                    /* E28378 的深一档状态 */
-  --accent-soft: #e28378;
-  --heal: #4e7a3d;
-  --week-fill: rgba(184, 167, 216, .38);
-  --week-fill-hover: rgba(184, 167, 216, .52);
-  --week-ink: rgba(82, 66, 112, .82);
-  /* 自带霞鹜文楷屏幕版(fonts/,按 unicode-range 分块按需加载),各平台字体统一;后面是加载完成前的过渡 */
-  --hand: "LXGW WenKai Screen", "Hannotate SC", "HanziPen SC", "Wawati SC", "Kaiti SC", "Palatino", serif;
-  /* 两种歪法轮着用,免得每个框歪得一样 */
-  --wobble-a: 255px 15px 225px 15px / 15px 225px 15px 255px;
-  --wobble-b: 15px 225px 15px 255px / 255px 15px 225px 15px;
-  /* 手绘断续墨线(替代机器虚线):笔画长短不一、带轻微起伏,repeat-x 平铺 */
-  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%236e644f' stroke-width='1.4' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
-  --brush-green-1: rgba(88, 214, 141, .30);
-  --brush-green-2: rgba(88, 214, 141, .28);
-  --brush-orange-1: rgba(222, 140, 110, .30);
-  --brush-orange-2: rgba(222, 140, 110, .28);
-  --wipe-fill: rgb(126, 101, 166);
-  /* 手绘戳影 / 状态色 / 局部底 — 亮暗共用 token,暗色只改变量 */
-  --glow: #FFFCF0;
-  --glow-2: transparent;
-  --glow-3: transparent;
-  --vignette: none;                     /* 暗色专用:四周压暗 */
-  --grain: none;                        /* 暗色专用:纸纹噪点 */
-  --selection: rgba(217, 119, 87, .28);
-  --btn-fg: #fff;
-  --danger: var(--accent);               /* 报错/警告字,亮色=强调色本身 */
-  --btn-bg: var(--accent-soft);          /* 实心按钮底,单独抽出:暗色换血红时不牵连链接/切换器 */
-  --btn-bg-hover: var(--accent);
-  --btn-edge: rgba(58, 50, 38, .5);
-  --status-clear: #337a55;
-  --status-prog: #a2553f;
-  --hover-wash: #F7EFE0;
-  --input-bg: #fff;
-  --code-bg: #f1e6cb;
-  --chip-on-bg: rgba(226, 131, 120, .16);
-  --week-wash2: rgba(160, 138, 200, .3);
-  --week-wash2-hover: rgba(160, 138, 200, .42);
-  --stroke-soft: rgba(58, 50, 38, .45);
-  --stroke-ink: rgba(58, 50, 38, .5);
-  --backdrop: rgba(58, 50, 38, .35);
-  --sh-sm: 2px 3px 0 rgba(58, 50, 38, .08);
-  --sh-md: 3px 4px 0 rgba(58, 50, 38, .10);
-  --sh-lg: 4px 6px 0 rgba(58, 50, 38, .08);
-  --sh-xl: 6px 8px 0 rgba(58, 50, 38, .15);
-  --sh-btn: 3px 4px 0 rgba(58, 50, 38, .12);
-  --sh-btn-press: 1px 1px 0 rgba(58, 50, 38, .12);
-  --sh-chip: 2px 3px 0 rgba(58, 50, 38, .07);
-  --sh-chip-press: 1px 1px 0 rgba(58, 50, 38, .07);
-  --icon-drop: drop-shadow(3px 4px 0 rgba(58, 50, 38, .12));
+  --desk: #DBD3C6;                      /* 桌面:暖灰米色 */
+  --napkin: #F8F1E0;                    /* 餐巾纸:和横线本同一种奶油色,只是没有横线 */
+  --sheet: #F8F1E0;                     /* 横线本:奶油色 */
+  --card: #FAF5E8;                      /* 浮层(建议列表/气泡) */
+  --ink: #2d2925;
+  --ink-soft: #756d63;
+  --pencil: rgba(45, 41, 37, .8);       /* 铅笔描边 */
+  --pencil-soft: rgba(45, 41, 37, .36);
+  --line: rgba(45, 41, 37, .16);
+  --line-soft: rgba(45, 41, 37, .08);
+  --rule: rgba(128, 112, 90, .2);       /* 横线本印好的横线:暖灰 */
+  --margin-rule: rgba(214, 112, 82, .6);  /* 抬头下面那道红线 */
+  --rl: 30px;                           /* 横线间距:横线本里的东西都按它排 */
+  --crayon: #d4704f;                    /* 陶土色彩铅 */
+  --crayon-fill: rgba(236, 160, 130, .26);
+  --crayon-tex-alpha: .42;
+  --crayon-ink: var(--crayon);          /* 按钮里水彩涂色的颜色 */
+  --accent: #b5553a;                    /* 字用的陶土色,比彩铅深一档才读得清 */
+  --gold: #b39a64;                      /* 只给搜索提示那颗 ✧ */
+  /* 彩铅高光(app.js 引用这几个名字,别改名):-1 是涂的线,-2 是底下一层淡色 */
+  --brush-green-1: rgba(98, 158, 88, .34);
+  --brush-green-2: rgba(150, 198, 128, .3);
+  --brush-orange-1: rgba(214, 112, 79, .32);
+  --brush-orange-2: rgba(236, 160, 130, .3);
+  --hand: "Kalam", "LXGW WenKai Screen", "Hannotate SC", "HanziPen SC", "Kaiti SC", serif;
+  /* 笔迹素材都是 mask,颜色由背景色决定;笔画是有轻重的填充形状,不是等宽描边。纸纹/桌面纹理例外 */
+  --swoosh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12' preserveAspectRatio='none'%3E%3Cpath d='M2.00 6.65 L4.45 6.77 L6.90 6.89 L9.34 7.00 L11.79 7.12 L14.24 7.24 L16.69 7.36 L19.14 7.47 L21.59 7.59 L24.04 7.71 L26.49 7.78 L28.95 7.80 L31.40 7.81 L33.85 7.82 L36.30 7.83 L38.75 7.83 L41.20 7.83 L43.65 7.82 L46.10 7.82 L48.55 7.81 L51.00 7.80 L53.45 7.78 L55.90 7.76 L58.35 7.74 L60.80 7.72 L63.25 7.70 L65.71 7.67 L68.16 7.65 L70.61 7.62 L73.06 7.59 L75.51 7.56 L77.96 7.53 L80.41 7.49 L82.86 7.46 L85.31 7.43 L87.76 7.40 L90.21 7.37 L92.66 7.34 L95.11 7.31 L97.56 7.28 L100.01 7.25 L102.46 7.22 L104.91 7.19 L107.36 7.17 L109.81 7.14 L112.26 7.11 L114.72 7.09 L117.17 7.07 L119.62 7.04 L122.07 7.02 L124.52 7.00 L126.97 6.98 L129.42 6.95 L131.87 6.89 L134.32 6.83 L136.77 6.76 L139.22 6.69 L141.67 6.62 L144.12 6.55 L146.57 6.47 L149.02 6.39 L151.47 6.31 L153.92 6.23 L156.37 6.14 L158.82 6.05 L161.27 5.96 L163.72 5.86 L166.17 5.76 L168.62 5.66 L171.07 5.56 L173.51 5.46 L175.96 5.35 L178.41 5.24 L180.86 5.13 L183.31 5.02 L185.76 4.91 L188.21 4.80 L190.66 4.68 L193.11 4.57 L195.56 4.45 L198.00 4.34 L198.00 4.06 L195.54 4.09 L193.09 4.11 L190.64 4.13 L188.19 4.15 L185.74 4.16 L183.29 4.18 L180.84 4.19 L178.39 4.21 L175.94 4.22 L173.49 4.23 L171.03 4.24 L168.58 4.25 L166.13 4.27 L163.68 4.28 L161.23 4.29 L158.78 4.30 L156.33 4.31 L153.88 4.33 L151.43 4.34 L148.98 4.36 L146.53 4.37 L144.08 4.39 L141.63 4.40 L139.18 4.42 L136.73 4.44 L134.28 4.45 L131.83 4.47 L129.38 4.48 L126.93 4.54 L124.48 4.59 L122.03 4.64 L119.58 4.68 L117.13 4.73 L114.68 4.77 L112.24 4.81 L109.79 4.84 L107.34 4.87 L104.89 4.90 L102.44 4.93 L99.99 4.95 L97.54 4.97 L95.09 4.99 L92.64 5.00 L90.19 5.01 L87.74 5.02 L85.29 5.03 L82.84 5.03 L80.39 5.03 L77.94 5.03 L75.49 5.03 L73.04 5.03 L70.59 5.02 L68.14 5.01 L65.69 5.01 L63.25 5.00 L60.80 4.99 L58.35 4.98 L55.90 4.97 L53.45 4.96 L51.00 4.95 L48.55 4.95 L46.10 4.94 L43.65 4.93 L41.20 4.92 L38.75 4.92 L36.30 4.91 L33.85 4.91 L31.40 4.91 L28.95 4.90 L26.51 4.90 L24.06 4.96 L21.61 5.06 L19.16 5.15 L16.71 5.24 L14.26 5.33 L11.81 5.42 L9.36 5.51 L6.90 5.59 L4.45 5.67 L2.00 5.75 Z'/%3E%3Cpath d='M14.00 8.84 L16.12 8.91 L18.25 8.98 L20.37 9.04 L22.50 9.11 L24.62 9.18 L26.75 9.25 L28.87 9.31 L31.00 9.38 L33.12 9.44 L35.25 9.49 L37.37 9.50 L39.50 9.51 L41.62 9.52 L43.75 9.52 L45.87 9.52 L48.00 9.53 L50.12 9.53 L52.25 9.52 L54.37 9.52 L56.50 9.52 L58.63 9.51 L60.75 9.50 L62.88 9.49 L65.00 9.48 L67.13 9.47 L69.25 9.45 L71.38 9.44 L73.50 9.43 L75.63 9.41 L77.75 9.39 L79.88 9.38 L82.00 9.36 L84.13 9.34 L86.25 9.32 L88.38 9.31 L90.50 9.29 L92.63 9.27 L94.75 9.25 L96.88 9.24 L99.00 9.22 L101.13 9.20 L103.25 9.18 L105.38 9.17 L107.51 9.15 L109.63 9.14 L111.76 9.12 L113.88 9.11 L116.01 9.09 L118.13 9.08 L120.26 9.06 L122.38 9.05 L124.51 9.03 L126.63 8.99 L128.76 8.96 L130.88 8.92 L133.01 8.88 L135.13 8.83 L137.26 8.79 L139.38 8.74 L141.51 8.70 L143.63 8.65 L145.76 8.60 L147.88 8.55 L150.01 8.49 L152.13 8.44 L154.26 8.38 L156.38 8.33 L158.51 8.27 L160.63 8.21 L162.76 8.14 L164.88 8.08 L167.01 8.02 L169.13 7.95 L171.25 7.88 L173.38 7.82 L175.50 7.75 L177.63 7.68 L179.75 7.61 L181.88 7.54 L184.00 7.47 L184.00 7.33 L181.87 7.35 L179.75 7.37 L177.62 7.38 L175.50 7.40 L173.37 7.41 L171.25 7.43 L169.12 7.44 L166.99 7.46 L164.87 7.47 L162.74 7.48 L160.62 7.49 L158.49 7.51 L156.37 7.52 L154.24 7.53 L152.12 7.54 L149.99 7.55 L147.87 7.57 L145.74 7.58 L143.62 7.59 L141.49 7.60 L139.37 7.61 L137.24 7.63 L135.12 7.64 L132.99 7.65 L130.87 7.67 L128.74 7.68 L126.62 7.69 L124.49 7.70 L122.37 7.73 L120.24 7.76 L118.12 7.79 L115.99 7.82 L113.87 7.85 L111.74 7.87 L109.62 7.89 L107.49 7.92 L105.37 7.93 L103.25 7.95 L101.12 7.97 L99.00 7.98 L96.87 7.99 L94.75 8.00 L92.62 8.01 L90.50 8.02 L88.37 8.03 L86.25 8.03 L84.12 8.03 L82.00 8.03 L79.87 8.03 L77.75 8.03 L75.62 8.03 L73.50 8.03 L71.37 8.02 L69.25 8.02 L67.12 8.01 L65.00 8.01 L62.87 8.00 L60.75 8.00 L58.62 7.99 L56.50 7.98 L54.38 7.98 L52.25 7.97 L50.13 7.97 L48.00 7.96 L45.88 7.96 L43.75 7.95 L41.63 7.95 L39.50 7.94 L37.38 7.94 L35.25 7.94 L33.13 7.96 L31.00 8.01 L28.88 8.06 L26.75 8.11 L24.63 8.15 L22.50 8.20 L20.38 8.24 L18.25 8.28 L16.13 8.32 L14.00 8.36 Z' opacity='.5'/%3E%3C/svg%3E");
+  --squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='8' viewBox='0 0 22 8'%3E%3Cpath d='M-0.50 4.85 L-0.25 5.04 L0.01 5.23 L0.28 5.40 L0.55 5.58 L0.82 5.74 L1.09 5.89 L1.37 6.04 L1.65 6.17 L1.93 6.28 L2.22 6.39 L2.51 6.48 L2.79 6.55 L3.08 6.61 L3.37 6.66 L3.66 6.69 L3.94 6.70 L4.22 6.70 L4.50 6.69 L4.78 6.67 L5.05 6.64 L5.32 6.60 L5.59 6.55 L5.85 6.49 L6.11 6.43 L6.37 6.36 L6.63 6.29 L6.88 6.21 L7.14 6.13 L7.39 6.04 L7.64 5.95 L7.89 5.86 L8.14 5.77 L8.39 5.68 L8.65 5.59 L8.90 5.49 L9.15 5.39 L9.40 5.29 L9.65 5.19 L9.90 5.09 L10.15 4.98 L10.41 4.87 L10.66 4.76 L10.91 4.65 L11.17 4.53 L11.42 4.42 L11.68 4.30 L11.93 4.17 L12.19 4.05 L12.44 3.92 L12.70 3.80 L12.95 3.67 L13.21 3.54 L13.46 3.42 L13.71 3.30 L13.96 3.18 L14.22 3.06 L14.47 2.95 L14.71 2.84 L14.96 2.75 L15.20 2.66 L15.44 2.58 L15.68 2.51 L15.91 2.45 L16.14 2.40 L16.37 2.37 L16.59 2.35 L16.80 2.34 L17.01 2.35 L17.22 2.36 L17.43 2.39 L17.63 2.44 L17.84 2.49 L18.04 2.56 L18.25 2.64 L18.46 2.74 L18.67 2.84 L18.89 2.96 L19.11 3.10 L19.33 3.24 L19.56 3.39 L19.79 3.56 L20.02 3.73 L20.26 3.91 L20.50 4.09 L20.74 4.28 L20.99 4.47 L21.24 4.66 L21.49 4.85 L22.51 3.49 L22.26 3.30 L22.01 3.12 L21.76 2.93 L21.50 2.74 L21.24 2.56 L20.98 2.38 L20.71 2.20 L20.44 2.03 L20.17 1.86 L19.89 1.71 L19.61 1.57 L19.33 1.44 L19.04 1.33 L18.75 1.23 L18.46 1.15 L18.16 1.09 L17.87 1.05 L17.57 1.02 L17.28 1.02 L16.99 1.03 L16.70 1.06 L16.41 1.11 L16.13 1.18 L15.86 1.25 L15.59 1.34 L15.32 1.44 L15.06 1.56 L14.80 1.67 L14.54 1.80 L14.29 1.93 L14.03 2.07 L13.78 2.21 L13.54 2.35 L13.29 2.49 L13.04 2.63 L12.79 2.78 L12.55 2.92 L12.30 3.05 L12.06 3.19 L11.81 3.32 L11.57 3.45 L11.32 3.57 L11.08 3.69 L10.83 3.81 L10.59 3.92 L10.34 4.02 L10.09 4.12 L9.85 4.22 L9.60 4.31 L9.35 4.40 L9.10 4.49 L8.85 4.57 L8.60 4.65 L8.35 4.72 L8.11 4.79 L7.86 4.86 L7.61 4.93 L7.36 4.99 L7.11 5.05 L6.86 5.10 L6.62 5.15 L6.37 5.19 L6.13 5.23 L5.89 5.26 L5.65 5.29 L5.41 5.31 L5.18 5.33 L4.95 5.33 L4.72 5.33 L4.50 5.32 L4.28 5.30 L4.06 5.27 L3.84 5.23 L3.63 5.19 L3.42 5.13 L3.21 5.06 L2.99 4.99 L2.78 4.90 L2.57 4.80 L2.35 4.70 L2.13 4.58 L1.91 4.45 L1.68 4.31 L1.45 4.16 L1.22 4.00 L0.99 3.84 L0.75 3.66 L0.50 3.48 Z'/%3E%3C/svg%3E");
+  --crayon-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg stroke='%23000' stroke-linecap='round'%3E%3Cpath d='M-72.0 38.0 L-47.5 -2.0' stroke-width='1.56' opacity='0.73'/%3E%3Cpath d='M-36.0 38.0 L-11.5 -2.0' stroke-width='1.56' opacity='0.73'/%3E%3Cpath d='M0.0 38.0 L24.5 -2.0' stroke-width='1.56' opacity='0.73'/%3E%3Cpath d='M-69.6 38.0 L-45.5 -2.0' stroke-width='1.67' opacity='0.83'/%3E%3Cpath d='M-33.6 38.0 L-9.5 -2.0' stroke-width='1.67' opacity='0.83'/%3E%3Cpath d='M2.4 38.0 L26.5 -2.0' stroke-width='1.67' opacity='0.83'/%3E%3Cpath d='M-67.2 38.0 L-45.0 -2.0' stroke-width='1.06' opacity='0.35'/%3E%3Cpath d='M-31.2 38.0 L-9.0 -2.0' stroke-width='1.06' opacity='0.35'/%3E%3Cpath d='M4.8 38.0 L27.0 -2.0' stroke-width='1.06' opacity='0.35'/%3E%3Cpath d='M-65.0 38.0 L-43.3 -2.0' stroke-width='0.88' opacity='0.83'/%3E%3Cpath d='M-29.0 38.0 L-7.3 -2.0' stroke-width='0.88' opacity='0.83'/%3E%3Cpath d='M7.0 38.0 L28.7 -2.0' stroke-width='0.88' opacity='0.83'/%3E%3Cpath d='M-63.0 38.0 L-39.0 -2.0' stroke-width='0.85' opacity='0.95'/%3E%3Cpath d='M-27.0 38.0 L-3.0 -2.0' stroke-width='0.85' opacity='0.95'/%3E%3Cpath d='M9.0 38.0 L33.0 -2.0' stroke-width='0.85' opacity='0.95'/%3E%3Cpath d='M-60.3 38.0 L-40.1 -2.0' stroke-width='1.48' opacity='0.37'/%3E%3Cpath d='M-24.3 38.0 L-4.1 -2.0' stroke-width='1.48' opacity='0.37'/%3E%3Cpath d='M11.7 38.0 L31.9 -2.0' stroke-width='1.48' opacity='0.37'/%3E%3Cpath d='M-58.1 38.0 L-35.9 -2.0' stroke-width='0.93' opacity='0.92'/%3E%3Cpath d='M-22.1 38.0 L0.1 -2.0' stroke-width='0.93' opacity='0.92'/%3E%3Cpath d='M13.9 38.0 L36.1 -2.0' stroke-width='0.93' opacity='0.92'/%3E%3Cpath d='M-56.0 38.0 L-31.4 -2.0' stroke-width='1.70' opacity='0.42'/%3E%3Cpath d='M-20.0 38.0 L4.6 -2.0' stroke-width='1.70' opacity='0.42'/%3E%3Cpath d='M16.0 38.0 L40.6 -2.0' stroke-width='1.70' opacity='0.42'/%3E%3Cpath d='M-52.9 38.0 L-30.4 -2.0' stroke-width='1.41' opacity='0.56'/%3E%3Cpath d='M-16.9 38.0 L5.6 -2.0' stroke-width='1.41' opacity='0.56'/%3E%3Cpath d='M19.1 38.0 L41.6 -2.0' stroke-width='1.41' opacity='0.56'/%3E%3Cpath d='M-50.5 38.0 L-26.2 -2.0' stroke-width='0.84' opacity='0.87'/%3E%3Cpath d='M-14.5 38.0 L9.8 -2.0' stroke-width='0.84' opacity='0.87'/%3E%3Cpath d='M21.5 38.0 L45.8 -2.0' stroke-width='0.84' opacity='0.87'/%3E%3Cpath d='M-48.5 38.0 L-27.9 -2.0' stroke-width='1.03' opacity='0.93'/%3E%3Cpath d='M-12.5 38.0 L8.1 -2.0' stroke-width='1.03' opacity='0.93'/%3E%3Cpath d='M23.5 38.0 L44.1 -2.0' stroke-width='1.03' opacity='0.93'/%3E%3Cpath d='M-45.5 38.0 L-24.7 -2.0' stroke-width='1.64' opacity='0.70'/%3E%3Cpath d='M-9.5 38.0 L11.3 -2.0' stroke-width='1.64' opacity='0.70'/%3E%3Cpath d='M26.5 38.0 L47.3 -2.0' stroke-width='1.64' opacity='0.70'/%3E%3Cpath d='M-42.7 38.0 L-17.9 -2.0' stroke-width='1.32' opacity='0.85'/%3E%3Cpath d='M-6.7 38.0 L18.1 -2.0' stroke-width='1.32' opacity='0.85'/%3E%3Cpath d='M29.3 38.0 L54.1 -2.0' stroke-width='1.32' opacity='0.85'/%3E%3Cpath d='M-40.8 38.0 L-20.9 -2.0' stroke-width='1.78' opacity='0.60'/%3E%3Cpath d='M-4.8 38.0 L15.1 -2.0' stroke-width='1.78' opacity='0.60'/%3E%3Cpath d='M31.2 38.0 L51.1 -2.0' stroke-width='1.78' opacity='0.60'/%3E%3Cpath d='M-38.6 38.0 L-16.1 -2.0' stroke-width='1.22' opacity='0.95'/%3E%3Cpath d='M-2.6 38.0 L19.9 -2.0' stroke-width='1.22' opacity='0.95'/%3E%3Cpath d='M33.4 38.0 L55.9 -2.0' stroke-width='1.22' opacity='0.95'/%3E%3Cpath d='M-36.4 38.0 L-10.8 -2.0' stroke-width='0.90' opacity='0.78'/%3E%3Cpath d='M-0.4 38.0 L25.2 -2.0' stroke-width='0.90' opacity='0.78'/%3E%3Cpath d='M35.6 38.0 L61.2 -2.0' stroke-width='0.90' opacity='0.78'/%3E%3Cpath d='M-33.2 38.0 L-11.0 -2.0' stroke-width='1.34' opacity='0.68'/%3E%3Cpath d='M2.8 38.0 L25.0 -2.0' stroke-width='1.34' opacity='0.68'/%3E%3Cpath d='M38.8 38.0 L61.0 -2.0' stroke-width='1.34' opacity='0.68'/%3E%3Cpath d='M-30.4 38.0 L-6.3 -2.0' stroke-width='1.47' opacity='0.68'/%3E%3Cpath d='M5.6 38.0 L29.7 -2.0' stroke-width='1.47' opacity='0.68'/%3E%3Cpath d='M41.6 38.0 L65.7 -2.0' stroke-width='1.47' opacity='0.68'/%3E%3Cpath d='M-27.8 38.0 L-3.4 -2.0' stroke-width='0.99' opacity='0.56'/%3E%3Cpath d='M8.2 38.0 L32.6 -2.0' stroke-width='0.99' opacity='0.56'/%3E%3Cpath d='M44.2 38.0 L68.6 -2.0' stroke-width='0.99' opacity='0.56'/%3E%3Cpath d='M-24.7 38.0 L-1.5 -2.0' stroke-width='1.46' opacity='0.53'/%3E%3Cpath d='M11.3 38.0 L34.5 -2.0' stroke-width='1.46' opacity='0.53'/%3E%3Cpath d='M47.3 38.0 L70.5 -2.0' stroke-width='1.46' opacity='0.53'/%3E%3Cpath d='M-23.0 38.0 L2.3 -2.0' stroke-width='1.70' opacity='0.82'/%3E%3Cpath d='M13.0 38.0 L38.3 -2.0' stroke-width='1.70' opacity='0.82'/%3E%3Cpath d='M49.0 38.0 L74.3 -2.0' stroke-width='1.70' opacity='0.82'/%3E%3Cpath d='M-20.8 38.0 L0.4 -2.0' stroke-width='1.54' opacity='0.89'/%3E%3Cpath d='M15.2 38.0 L36.4 -2.0' stroke-width='1.54' opacity='0.89'/%3E%3Cpath d='M51.2 38.0 L72.4 -2.0' stroke-width='1.54' opacity='0.89'/%3E%3Cpath d='M-17.6 38.0 L5.2 -2.0' stroke-width='1.89' opacity='0.93'/%3E%3Cpath d='M18.4 38.0 L41.2 -2.0' stroke-width='1.89' opacity='0.93'/%3E%3Cpath d='M54.4 38.0 L77.2 -2.0' stroke-width='1.89' opacity='0.93'/%3E%3Cpath d='M-15.1 38.0 L5.0 -2.0' stroke-width='1.34' opacity='0.58'/%3E%3Cpath d='M20.9 38.0 L41.0 -2.0' stroke-width='1.34' opacity='0.58'/%3E%3Cpath d='M56.9 38.0 L77.0 -2.0' stroke-width='1.34' opacity='0.58'/%3E%3Cpath d='M-13.1 38.0 L7.0 -2.0' stroke-width='0.98' opacity='0.39'/%3E%3Cpath d='M22.9 38.0 L43.0 -2.0' stroke-width='0.98' opacity='0.39'/%3E%3Cpath d='M58.9 38.0 L79.0 -2.0' stroke-width='0.98' opacity='0.39'/%3E%3Cpath d='M-10.2 38.0 L10.5 -2.0' stroke-width='1.33' opacity='0.85'/%3E%3Cpath d='M25.8 38.0 L46.5 -2.0' stroke-width='1.33' opacity='0.85'/%3E%3Cpath d='M61.8 38.0 L82.5 -2.0' stroke-width='1.33' opacity='0.85'/%3E%3Cpath d='M-8.5 38.0 L15.3 -2.0' stroke-width='1.12' opacity='0.60'/%3E%3Cpath d='M27.5 38.0 L51.3 -2.0' stroke-width='1.12' opacity='0.60'/%3E%3Cpath d='M63.5 38.0 L87.3 -2.0' stroke-width='1.12' opacity='0.60'/%3E%3Cpath d='M-6.6 38.0 L18.6 -2.0' stroke-width='1.17' opacity='0.89'/%3E%3Cpath d='M29.4 38.0 L54.6 -2.0' stroke-width='1.17' opacity='0.89'/%3E%3Cpath d='M65.4 38.0 L90.6 -2.0' stroke-width='1.17' opacity='0.89'/%3E%3Cpath d='M-3.5 38.0 L17.3 -2.0' stroke-width='1.33' opacity='0.50'/%3E%3Cpath d='M32.5 38.0 L53.3 -2.0' stroke-width='1.33' opacity='0.50'/%3E%3Cpath d='M68.5 38.0 L89.3 -2.0' stroke-width='1.33' opacity='0.50'/%3E%3Cpath d='M-0.3 38.0 L21.7 -2.0' stroke-width='1.60' opacity='0.37'/%3E%3Cpath d='M35.7 38.0 L57.7 -2.0' stroke-width='1.60' opacity='0.37'/%3E%3Cpath d='M71.7 38.0 L93.7 -2.0' stroke-width='1.60' opacity='0.37'/%3E%3C/g%3E%3C/svg%3E");
+  --pencil-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 8' preserveAspectRatio='none'%3E%3Cpath d='M3.00 5.12 L11.00 5.50 L18.99 5.86 L27.00 6.01 L35.00 5.88 L42.99 5.95 L51.01 6.01 L59.00 5.86 L66.99 5.92 L75.01 5.90 L83.00 5.78 L90.99 5.80 L99.00 5.81 L107.00 5.73 L115.00 5.73 L123.01 5.59 L131.00 5.55 L139.00 5.48 L147.00 5.50 L155.00 5.52 L163.00 5.41 L171.00 5.40 L179.00 5.29 L187.00 5.30 L195.01 5.16 L203.00 5.15 L211.00 5.18 L219.00 5.16 L227.01 5.08 L235.00 5.01 L243.00 5.01 L251.00 4.99 L259.00 4.98 L267.00 5.05 L275.00 4.95 L283.00 5.05 L291.01 5.04 L299.01 4.90 L307.00 4.95 L315.01 4.96 L323.01 4.88 L331.00 4.93 L339.01 5.00 L347.01 4.86 L355.00 4.93 L363.00 4.84 L371.00 4.89 L379.01 4.92 L387.01 4.79 L395.01 4.73 L403.00 4.72 L411.00 4.76 L419.01 4.64 L427.00 4.61 L434.99 4.64 L443.00 4.67 L451.01 4.55 L459.00 4.51 L467.00 4.51 L475.00 4.38 L483.00 4.42 L491.00 4.32 L498.99 4.35 L507.01 4.38 L515.00 4.21 L523.00 4.26 L531.00 4.25 L539.00 4.17 L546.99 4.18 L554.99 4.29 L563.01 4.29 L571.00 4.16 L578.99 4.26 L587.00 4.32 L595.00 4.23 L603.00 4.32 L611.00 4.26 L618.99 4.35 L627.00 4.44 L635.00 4.47 L643.00 4.54 L651.00 4.48 L658.99 4.57 L667.00 4.70 L675.00 4.70 L683.00 4.73 L690.99 4.77 L699.00 4.90 L707.01 4.88 L714.99 4.82 L722.99 4.98 L731.00 4.94 L739.00 4.98 L747.00 4.87 L755.00 4.78 L763.00 4.63 L771.00 4.45 L779.00 4.40 L787.00 4.18 L795.00 4.16 L795.00 3.80 L787.00 3.53 L779.00 3.46 L771.00 3.21 L763.00 3.08 L755.00 2.94 L747.00 2.74 L739.00 2.67 L731.00 2.64 L723.01 2.71 L715.01 2.58 L706.99 2.67 L699.00 2.73 L691.01 2.64 L683.00 2.66 L675.00 2.69 L667.00 2.74 L659.01 2.67 L651.00 2.64 L643.00 2.76 L635.00 2.74 L627.00 2.76 L619.01 2.72 L611.00 2.67 L603.00 2.77 L595.00 2.71 L587.00 2.82 L579.01 2.78 L571.00 2.68 L562.99 2.81 L555.01 2.79 L547.01 2.66 L539.00 2.62 L531.00 2.68 L523.00 2.65 L515.00 2.55 L506.99 2.67 L499.01 2.59 L491.00 2.50 L483.00 2.54 L475.00 2.44 L467.00 2.51 L459.00 2.46 L450.99 2.45 L443.00 2.52 L435.01 2.44 L427.00 2.38 L418.99 2.37 L411.00 2.47 L403.00 2.41 L394.99 2.42 L386.99 2.47 L378.99 2.61 L371.00 2.60 L363.00 2.57 L355.00 2.69 L346.99 2.66 L338.99 2.85 L331.00 2.83 L322.99 2.82 L314.99 2.96 L307.00 3.00 L298.99 3.02 L290.99 3.21 L283.00 3.28 L275.00 3.23 L267.00 3.39 L259.00 3.36 L251.00 3.41 L243.00 3.47 L235.00 3.49 L226.99 3.59 L219.00 3.67 L211.00 3.70 L203.00 3.67 L194.99 3.66 L187.00 3.78 L179.00 3.74 L171.00 3.81 L163.00 3.79 L155.00 3.84 L147.00 3.78 L139.00 3.71 L131.00 3.72 L122.99 3.70 L115.00 3.78 L107.00 3.72 L99.00 3.75 L91.01 3.68 L83.00 3.61 L74.99 3.69 L67.01 3.67 L59.00 3.59 L50.99 3.71 L43.01 3.64 L35.00 3.56 L27.00 3.70 L19.01 3.61 L11.00 4.04 L3.00 4.44 Z'/%3E%3Cpath d='M40.00 6.00 L48.00 6.27 L56.00 6.39 L64.00 6.30 L72.00 6.30 L80.00 6.19 L88.00 6.24 L96.00 6.16 L104.00 6.11 L112.00 6.20 L120.00 6.09 L128.00 6.08 L136.00 6.14 L144.00 6.06 L152.00 6.10 L160.00 6.02 L168.00 6.13 L176.01 6.04 L184.00 6.01 L192.00 6.16 L200.00 6.04 L208.00 6.17 L216.00 6.19 L224.01 6.13 L232.00 6.05 L240.00 6.07 L248.00 6.10 L256.00 6.14 L264.00 6.18 L272.00 6.24 L280.01 6.15 L288.00 6.12 L296.00 6.19 L304.00 6.12 L312.00 6.12 L320.00 6.19 L328.00 6.22 L336.00 6.12 L344.00 6.18 L352.00 6.22 L360.00 6.23 L368.00 6.17 L376.00 6.25 L384.00 6.13 L392.00 6.22 L400.00 6.24 L408.00 6.26 L416.00 6.21 L424.00 6.16 L432.00 6.16 L440.00 6.25 L448.00 6.21 L456.00 6.30 L464.00 6.23 L472.00 6.37 L480.00 6.30 L488.00 6.30 L496.00 6.35 L504.00 6.42 L512.00 6.47 L520.00 6.47 L528.00 6.46 L536.00 6.54 L544.00 6.64 L552.00 6.61 L560.00 6.70 L568.00 6.57 L575.99 6.75 L584.00 6.75 L592.00 6.71 L600.00 6.72 L608.00 6.73 L616.00 6.80 L624.00 6.67 L632.00 6.76 L640.00 6.73 L648.00 6.68 L656.00 6.74 L664.00 6.72 L672.00 6.60 L680.00 6.67 L688.00 6.61 L696.00 6.54 L704.00 6.45 L712.00 6.24 L720.00 6.22 L728.00 6.08 L736.00 6.06 L736.00 5.82 L728.00 5.68 L720.00 5.65 L712.00 5.49 L704.00 5.51 L696.00 5.41 L688.00 5.36 L680.00 5.40 L672.00 5.31 L664.00 5.41 L656.00 5.41 L648.00 5.35 L640.00 5.39 L632.00 5.41 L624.00 5.33 L616.00 5.47 L608.00 5.42 L600.00 5.42 L592.00 5.44 L584.00 5.50 L576.01 5.53 L568.00 5.38 L560.00 5.53 L552.00 5.48 L544.00 5.55 L536.00 5.48 L528.00 5.44 L520.00 5.47 L512.00 5.50 L504.00 5.48 L496.00 5.43 L488.00 5.40 L480.00 5.42 L472.00 5.50 L464.00 5.37 L456.00 5.44 L448.00 5.35 L440.00 5.38 L432.00 5.28 L424.00 5.26 L416.00 5.29 L408.00 5.32 L400.00 5.27 L392.00 5.23 L384.00 5.11 L376.00 5.19 L368.00 5.07 L360.00 5.10 L352.00 5.06 L344.00 4.98 L336.00 4.89 L328.00 4.97 L320.00 4.92 L312.00 4.82 L304.00 4.81 L296.00 4.86 L288.00 4.78 L279.99 4.81 L272.00 4.90 L264.00 4.84 L256.00 4.81 L248.00 4.79 L240.00 4.77 L232.00 4.78 L223.99 4.89 L216.00 4.97 L208.00 4.98 L200.00 4.89 L192.00 5.04 L184.00 4.92 L175.99 4.98 L168.00 5.11 L160.00 5.03 L152.00 5.14 L144.00 5.12 L136.00 5.23 L128.00 5.18 L120.00 5.22 L112.00 5.34 L104.00 5.25 L96.00 5.30 L88.00 5.38 L80.00 5.32 L72.00 5.41 L64.00 5.40 L56.00 5.47 L48.00 5.63 L40.00 5.71 Z' opacity='.45'/%3E%3C/svg%3E");
+  --desk-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.24 2.4 0 0 0 -1.15'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)' opacity='.26'/%3E%3C/svg%3E");
+  --fiber: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5 .1' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.38 2 0 0 0 -1.2'/%3E%3C/filter%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 2.6 0 0 0 -1.45'/%3E%3C/filter%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.35 0 0 0 0 0.28 2.6 0 0 0 -1.5'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23a)' opacity='.1'/%3E%3Crect width='240' height='240' filter='url(%23c)' opacity='.4'/%3E%3Crect width='240' height='240' filter='url(%23d)' opacity='.2'/%3E%3C/svg%3E");
+  /* 桌面的深浅斑驳:几块大的柔边光斑(不放进平铺瓦片——低频噪声一平铺就露接缝)+ 四周压一点边 */
+  --vignette: radial-gradient(130% 100% at 50% 25%, transparent 55%, rgba(90, 74, 54, .16) 100%);
+  --glow: rgba(255, 252, 244, .45);
+  --glow-2: rgba(246, 240, 228, .5);
+  --glow-3: rgba(170, 150, 120, .14);
+  --selection: rgba(236, 160, 130, .4);
+  --danger: #b23a2b;
+  --status-clear: #3f7445;
+  --status-prog: #a84d2e;
+  --hover-wash: rgba(45, 41, 37, .04);
+  --code-bg: rgba(45, 41, 37, .07);
+  --backdrop: rgba(60, 48, 34, .3);
+  --sh-paper: 0 1px 1px rgba(60, 48, 34, .1), 0 12px 24px -16px rgba(60, 48, 34, .45);
+  --sh-float: 0 1px 2px rgba(60, 48, 34, .1), 0 14px 30px -14px rgba(60, 48, 34, .45);
   --member-blend: multiply;
-  --member-filter: saturate(.78) contrast(.94);
-  --member-opacity: .92;
+  --member-filter: saturate(.65) contrast(.95);
+  --member-opacity: .9;
+  --go-w: 116px;                        /* 「查询」按钮固定宽度:输入框底下那道铅笔线要让开它 */
 }
 
 * { box-sizing: border-box; }
@@ -71,8 +63,8 @@
 ::selection { background: var(--selection); }
 
 button:focus-visible, #q:focus-visible {
-  outline: 2px dashed var(--accent-soft);
-  outline-offset: 3px;
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 5px;
 }
 
 body {
@@ -80,19 +72,43 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   font-family: var(--hand);
+  font-size: 16px;
+  line-height: 1.5;
   color: var(--ink);
-  /* 水彩意象:中央暖光(+暗色第二层脚光) */
   background:
-    var(--grain),
+    var(--desk-tex),
     var(--vignette),
     radial-gradient(1200px 600px at 50% -200px, var(--glow) 0%, transparent 70%),
     radial-gradient(800px 420px at 12% 110%, var(--glow-2) 0%, transparent 55%),
     radial-gradient(620px 340px at 92% 78%, var(--glow-3) 0%, transparent 60%),
-    var(--paper);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    var(--desk);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   background-attachment: fixed;
   display: flex;
   flex-direction: column;
+}
+
+/* 标题/名字底下随手拉的一道弧线(画了两遍)。挂在伪元素上,宿主要 position: relative */
+.brand h1::after,
+.charHead .who::after,
+dialog h2::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -8px;
+  bottom: -7px;
+  height: 10px;
+  background: var(--ink);
+  -webkit-mask: var(--swoosh) 0 0 / 100% 100% no-repeat;
+  mask: var(--swoosh) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+/* 一张纸:平放在桌上,只有很浅的影子 */
+.napkin,
+.card,
+dialog {
+  box-shadow: var(--sh-paper);
 }
 
 /* ---------- 头部 ---------- */
@@ -100,12 +116,14 @@ header {
   max-width: 880px;
   width: 100%;
   margin: 0 auto;
-  padding: 44px 24px 6px;
+  padding: 40px 24px 6px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
+  gap: 10px;
   position: relative;
 }
+header .brand { margin-right: auto; }
 .brandTop {
   display: flex;
   align-items: center;
@@ -113,223 +131,303 @@ header {
 }
 .homeLink { display: block; line-height: 0; }
 .brandIcon {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   flex: none;
-  border-radius: 17px;
-  filter: var(--icon-drop);
-  transform: rotate(-2deg);
+  border-radius: 12px;
 }
 .brand h1 {
+  position: relative;
   margin: 0;
-  font-size: 44px;
+  font-size: 40px;
   font-weight: 700;
-  letter-spacing: .1em;
+  line-height: 1.1;
+  letter-spacing: 0;
 }
+
+/* ---------- 按钮 ---------- */
+/* 按钮的框和水彩涂色是 app.js 按实际尺寸现画的(见 app.js「手绘框」):画好后元素带上 .inked,
+   ::after 显示钢笔框(--ink-frame)、::before 显示水彩涂色(--ink-fill),颜色在这里定。
+   伪元素 inset = -(6px 画布余量 + 1.5px 透明边框),正好和画布对齐。
+   JS 还没画好(或没跑)时,退回一道普通的彩铅色边框。 */
+button {
+  position: relative;
+  isolation: isolate;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: .06em;
+  padding: 11px 26px 10px;
+  color: var(--ink);
+  background: var(--crayon-fill);
+  border: 1.5px solid var(--crayon);
+  border-radius: 9px;
+  cursor: pointer;
+  --frame-color: var(--crayon);
+  --fill-color: var(--crayon-ink);
+  --fill-op: .8;
+  transition: color .15s, transform .1s;
+}
+button.inked { background: transparent; border-color: transparent; }
+button.inked::before,
+button.inked::after {
+  content: "";
+  position: absolute;
+  inset: -7.5px;
+  pointer-events: none;
+}
+button.inked::before {
+  z-index: -1;
+  background: var(--fill-color);
+  opacity: var(--fill-op);
+  -webkit-mask: var(--ink-fill) 0 0 / 100% 100% no-repeat;
+  mask: var(--ink-fill) 0 0 / 100% 100% no-repeat;
+  transition: opacity .15s;
+}
+button.inked::after {
+  background: var(--frame-color);
+  -webkit-mask: var(--ink-frame) 0 0 / 100% 100% no-repeat;
+  mask: var(--ink-frame) 0 0 / 100% 100% no-repeat;
+  transition: background-color .15s;
+}
+button:hover { --fill-op: 1; }
+button:active { transform: translateY(1px); }
+/* 次要按钮=钢笔画的空框;悬停时淡淡刷一层墨色水彩 */
+button.ghost {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: .02em;
+  padding: 6px 14px 7px;
+  background: transparent;
+  --frame-color: var(--pencil);
+  --fill-color: var(--ink);
+  --fill-op: 0;
+}
+button.ghost:not(.inked) { border-color: var(--pencil); }
+button.ghost:hover { --frame-color: var(--ink); --fill-op: .1; }
+
 /* ---------- 主体 ---------- */
 main {
   max-width: 880px;
   width: 100%;
   margin: 0 auto;
-  padding: 30px 24px 40px;
+  padding: 26px 24px 48px;
   flex: 1;
 }
 
-.searchWrap { position: relative; display: flex; gap: 12px; }
+/* 纸:细纤维纹理(--fiber)+ 纸色。餐巾纸、横线本、弹窗、下拉、气泡都是这一种纸,只是颜色不同 */
+.napkin,
+.card,
+dialog,
+.sugg,
+.weekTip {
+  background: var(--fiber), var(--paper-color, var(--napkin));
+}
+.card { --paper-color: var(--sheet); }
+.sugg { --paper-color: var(--card); }
+/* 纸边不是尺子裁的:app.js 按实际尺寸画一张 mask(--paper-edge),画好后纸挪到 ::before 上。
+   ::before 比元素四周各大 2px,边只往外毛出 0~1.6px、不往里缩——元素自己的影子、铺到纸边的横线都还贴得上。
+   宿主要自成层叠上下文,::before 才压在影子上、垫在字底下 */
+.napkin.edged,
+.card.edged { background: none; }
+.napkin.edged::before,
+.card.edged::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: var(--fiber), var(--paper-color, var(--napkin));
+  -webkit-mask: var(--paper-edge) 0 0 / 100% 100% no-repeat;
+  mask: var(--paper-edge) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.napkin {
+  position: relative;
+  z-index: 1;                            /* 下拉建议要盖得住下面的横线本 */
+  padding: 38px 44px 28px;
+}
+
+/* 输入框=在一道铅笔线上写字 */
+.searchWrap { position: relative; display: flex; align-items: flex-end; gap: 18px; }
+.searchWrap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: calc(var(--go-w) + 18px);
+  bottom: -2px;
+  height: 8px;
+  background: var(--pencil-soft);
+  -webkit-mask: var(--pencil-line) 0 0 / 100% 100% no-repeat;
+  mask: var(--pencil-line) 0 0 / 100% 100% no-repeat;
+  transition: background-color .15s;
+  pointer-events: none;
+}
+.searchWrap:focus-within::after { background: var(--pencil); }
 #q {
   flex: 1;
+  min-width: 0;
   font: inherit;
-  font-size: 18px;
-  padding: 12px 16px;
+  font-size: 21px;
+  line-height: 1.3;
+  padding: 8px 4px 7px;
   color: var(--ink);
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: var(--wobble-a);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   outline: none;
-  box-shadow: var(--sh-md);
-  transition: border-color .15s;
 }
-#q:focus { border-color: var(--accent-soft); }
-button {
-  font: inherit;
-  font-size: 17px;
-  letter-spacing: .12em;
-  padding: 11px 26px;
-  color: var(--btn-fg);
-  background: var(--btn-bg);
-  border: 2px solid var(--btn-edge);
-  border-radius: var(--wobble-b);
-  box-shadow: var(--sh-btn);
-  cursor: pointer;
-  transform: rotate(-.5deg);
-  transition: transform .15s ease, background .15s, color .15s, border-color .15s, box-shadow .15s;
-}
-button:hover {
-  background: var(--btn-bg-hover);
-  transform: rotate(.3deg) translateY(-1px);
-}
-button:active {
-  transform: translate(2px, 3px);
-  box-shadow: var(--sh-btn-press);
-}
-button.ghost {
-  color: var(--ink);
-  background: var(--card);
-  border: 2px solid var(--line-soft);
-  border-radius: var(--wobble-a);
-  font-size: 14px;
-  padding: 8px 16px;
-  box-shadow: var(--sh-sm);
-}
-button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); background: var(--card); }
+#q::placeholder { color: var(--ink-soft); opacity: .6; }
+#go { flex: none; width: var(--go-w); padding-left: 0; padding-right: 0; }
 
-/* 搜索建议 */
+/* 搜索建议:从横线本上撕下来的一小条 */
 .sugg {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   left: 0; right: 0;
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: 22px 18px 20px 16px / 18px 21px 16px 19px;
-  box-shadow: var(--sh-lg);
+  box-shadow: var(--sh-float);
   z-index: 10;
   overflow: hidden;
-  padding: 8px 0;
+  padding: 2px 0;
 }
 .sugg.hidden { display: none; }
 .sugg .item {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 10px 14px;
+  padding: 8px 18px;
   cursor: pointer;
-  background-image: var(--ink-dash);
-  background-repeat: repeat-x;
-  background-position: left top;
+  border-top: 1px solid var(--rule);
 }
-.sugg .item:first-child { background-image: none; }
+.sugg .item:first-child { border-top: 0; }
 .sugg .item:hover { background-color: var(--hover-wash); }
 .sugg .item .n { font-size: 17px; }
-.sugg .item .s { font-size: 13px; color: var(--ink-soft); }
-.sugg .item.dim { color: var(--ink-soft); cursor: default; font-size: 13px; justify-content: center; }
+.sugg .item .s { font-size: 14px; color: var(--ink-soft); }
+.sugg .item.dim { color: var(--ink-soft); cursor: default; font-size: 14px; justify-content: center; }
 
 .searchHint {
-  margin: 10px 6px 0;
-  font-size: 14px;
+  margin: 14px 2px 0;
+  font-size: 15px;
   color: var(--ink-soft);
-  letter-spacing: .06em;
 }
 .searchHint::after {
   content: " ✧";
   color: var(--gold);
 }
 
-/* 副本 chips */
+/* 副本 chips:钢笔描的小框;选中的那个用水彩涂满、换成陶土色的边。和上面隔一道波浪线 */
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin: 22px 0 6px;
+  gap: 14px 14px;
   align-items: center;
 }
+#chips {
+  position: relative;
+  margin-top: 22px;
+  padding-top: 26px;
+}
+#chips::before,
+footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: var(--pencil-soft);
+  -webkit-mask: var(--squiggle) 0 0 / 22px 8px repeat-x;
+  mask: var(--squiggle) 0 0 / 22px 8px repeat-x;
+  pointer-events: none;
+}
 .chip {
-  font: inherit;
   font-size: 15px;
-  letter-spacing: .05em;
-  padding: 7px 18px;
-  border: 2px solid var(--line-soft);
-  border-radius: var(--wobble-a);
-  background: var(--card);
+  font-weight: 400;
+  letter-spacing: .02em;
+  padding: 4px 13px 5px;
+  color: var(--ink-soft);
+  background: transparent;
+  border-color: var(--pencil-soft);
+  --frame-color: var(--pencil-soft);
+  --fill-op: 0;
+}
+.chip:hover { color: var(--ink); --frame-color: var(--pencil); --fill-op: .3; }
+.chip.on,
+.chip.on:hover {
   color: var(--ink);
-  cursor: pointer;
-  box-shadow: var(--sh-chip);
-  --tilt: -.4deg;   /* 倾斜放变量里,免得 nth-child(even) 权重压掉 hover/active 的位移 */
-  transform: rotate(var(--tilt));
+  font-weight: 700;
+  --frame-color: var(--crayon);
+  --fill-op: .85;
 }
-.chip:nth-child(even) { border-radius: var(--wobble-b); --tilt: .4deg; }
-.chip:hover {
-  color: var(--accent);
-  border-color: var(--accent-soft);
-  background: var(--card);
-  transform: rotate(var(--tilt)) translateY(-1px);
-}
-.chip:active {
-  transform: rotate(var(--tilt)) translate(1px, 2px);
-  box-shadow: var(--sh-chip-press);
-}
-.chip.on {
-  color: var(--accent);
-  background: var(--chip-on-bg);
-  border-color: var(--accent);
-}
+.chip.on:not(.inked) { background: var(--crayon-fill); border-color: var(--crayon); }
 
 /* ---------- 结果 ---------- */
-#result { margin-top: 26px; }
+#result { margin-top: 34px; }
 
+/* 角色名:直接写在桌上的一行大字,底下拉一道弧线 */
 .charHead {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 6px 2px 16px;
-  padding-bottom: 13px;
-  /* 底下一条手绘断线:和 .weekStat / footer 同一条线,把角色这块和下面的卡片分开,
-     不然它就是一行悬空的字 */
-  background-image: var(--ink-dash);
-  background-repeat: repeat-x;
-  background-position: left bottom;
+  gap: 6px 14px;
+  margin: 0 0 22px;
+  padding: 0 4px;
 }
-/* 角色头像=本人这次用的职业纹章,手绘歪框 + 戳影,和卡片一套语言 */
 .charHead .charJob {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   flex: none;
   display: block;
-  border-radius: 11px 14px 10px 13px / 13px 10px 14px 11px;
-  transform: rotate(-2deg);
-  filter: var(--icon-drop);
+  border-radius: 7px;
   mix-blend-mode: var(--member-blend);
+  filter: var(--member-filter);
   opacity: var(--member-opacity);
 }
 .charHead .who {
+  position: relative;
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
-.charHead .whoName { font-size: 27px; font-weight: 700; letter-spacing: .04em; }
-.charHead .whoAt { font-size: 17px; color: var(--ink-soft); }
-.charHead .whoServer { font-size: 17px; color: var(--ink-soft); letter-spacing: .06em; }
+.charHead .whoName { font-size: 30px; font-weight: 700; line-height: 1.2; }
+.charHead .whoAt { font-size: 16px; color: var(--ink-soft); }
+.charHead .whoServer { font-size: 16px; color: var(--ink-soft); }
 .charHead .meta { display: none; }
 
-/* ID 右边的已通关徽章:JS 生成的水彩笔刷垫底,文字浮在上面 */
+/* ID 右边的已通关徽章:JS 生成的彩铅涂色垫底,文字浮在上面 */
 .charHead .clearBadge {
   position: relative;
   font-size: 15px;
-  padding: 4px 13px 5px;
-  color: var(--status-clear);   /* 深绿常规,和卡片词条统一;粗体在笔刷上太喊叫 */
+  padding: 3px 12px 4px;
+  color: var(--status-clear);
   text-decoration: none;
   white-space: nowrap;
 }
 .charHead .clearBadge .badgeTxt { position: relative; }
-.charHead .clearBadge .badgeBrush {
+.charHead .clearBadge[href]:hover .badgeTxt { text-decoration: underline; text-underline-offset: 4px; }
+.badgeBrush {
   position: absolute;
-  left: -3px;
+  left: 0;
   top: 0;
-  width: calc(100% + 6px);
+  width: 100%;
   height: 100%;
-  transform: rotate(-1.4deg);
+  overflow: visible;
 }
-.charHead .clearBadge[href]:hover { filter: saturate(1.4) brightness(.97); }
+.badgeBrush .crayon {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 
+/* 每个副本=一页横线本:抬头底下一道红线,往下是按 --rl 印好的暖灰横线,字都坐在线上 */
 .card {
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: var(--wobble-b);
-  padding: 20px 22px 18px;
-  margin-bottom: 18px;
-  box-shadow: var(--sh-lg);
-  transform: rotate(-.15deg);
+  --pad: 30px;
+  position: relative;
+  isolation: isolate;
+  padding: 0 var(--pad) 16px;
+  margin-bottom: 28px;
   animation: card-in .38s cubic-bezier(.2, .7, .3, 1) backwards;
 }
 .card:nth-of-type(1) { animation-delay: 0s; }
@@ -338,8 +436,8 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 .card:nth-of-type(4) { animation-delay: .21s; }
 .card:nth-of-type(n+5) { animation-delay: .28s; }
 @keyframes card-in {
-  from { opacity: 0; transform: rotate(-.15deg) translateY(10px); }
-  to   { opacity: 1; transform: rotate(-.15deg) translateY(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .card { animation: none; }
@@ -347,62 +445,140 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 .card .bossline {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 8px 14px;
   flex-wrap: wrap;
+  margin: 0 calc(-1 * var(--pad));
+  padding: 20px var(--pad) 10px;
+  border-bottom: 1.5px solid var(--margin-rule);
 }
-.card .boss { font-size: 20px; font-weight: 700; letter-spacing: .04em; }
-/* 状态词条:徽章同款水彩笔刷,比徽章的稍高一点 */
+.card .boss { font-size: 22px; font-weight: 700; }
+/* 状态词条:徽章同款彩铅 */
 .card .status {
   position: relative;
   font-size: 15px;
-  padding: 3px 6px;
+  padding: 2px 10px 3px;
   white-space: nowrap;
 }
 .card .status.clear { color: var(--status-clear); }
-.card .status.prog  { color: var(--status-prog); }   /* 橙笔刷配的深陶土,和深绿同明度 */
+.card .status.prog  { color: var(--status-prog); }
 .card .status .badgeTxt { position: relative; }
-.card .status .badgeBrush {
-  position: absolute;
-  left: -3px;
-  top: 0;
-  width: calc(100% + 6px);
-  height: 100%;
-  transform: rotate(-.8deg);
-}
-.card .when { font-size: 13px; color: var(--ink-soft); }
+.card .when { font-size: 14px; color: var(--ink-soft); }
+/* 链接:陶土色的字,底下随手一道 */
 .card a.logLink {
+  position: relative;
   margin-left: auto;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--accent);
   text-decoration: none;
-  border-bottom: 1px solid transparent;
   white-space: nowrap;
 }
-.card a.logLink:hover { border-bottom-color: var(--accent); }
+.card a.logLink::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -4px;
+  bottom: -4px;
+  height: 7px;
+  background: var(--crayon);
+  opacity: .6;
+  -webkit-mask: var(--swoosh) 0 0 / 100% 100% no-repeat;
+  mask: var(--swoosh) 0 0 / 100% 100% no-repeat;
+  transition: opacity .15s;
+}
+.card a.logLink:hover::after { opacity: 1; }
 
+/* 横线:两块都铺到纸边;每块高度都是 --rl 的整数倍,上下接起来是连续的一页 */
+.party,
 .weekStat {
-  margin-top: 14px;
-  padding-top: 15px;
-  background-image: var(--ink-dash);
-  background-repeat: repeat-x;
-  background-position: left top;
+  margin-left: calc(-1 * var(--pad));
+  margin-right: calc(-1 * var(--pad));
+  padding-left: var(--pad);
+  padding-right: var(--pad);
+  background: repeating-linear-gradient(to bottom, transparent 0 calc(var(--rl) - 1px), var(--rule) calc(var(--rl) - 1px) var(--rl));
+}
+.party {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));  /* 严格 4+4:上排 T+奶,下排 DPS(排序已按职能) */
+  grid-auto-rows: calc(var(--rl) * 2);
+  column-gap: 12px;
+}
+/* 队员:两行字各坐一条横线;名单里只有「本人」用彩铅涂出来 */
+.member {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 16px;
+  min-width: 0;
+}
+.member img {
+  width: 26px; height: 26px;
+  margin-top: 7px;
+  border-radius: 5px;
+  flex: none;
+  display: block;
+  mix-blend-mode: var(--member-blend);
+  filter: var(--member-filter);
+  opacity: var(--member-opacity);
+}
+.member .mn {
+  position: relative;
+  top: 5px;                              /* 字往下挪一点,让字脚落在横线上 */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: var(--rl);
+}
+.member .mname {
+  position: relative;
+  isolation: isolate;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 5px;
+}
+.member.me .mname { font-weight: 700; }
+.member.me .mname::before {
+  content: "";
+  position: absolute;
+  inset: 5px 0 4px;
+  z-index: -1;
+  background: var(--crayon);
+  opacity: .5;
+  -webkit-mask: var(--crayon-tex) 0 0 / 36px 36px repeat;
+  mask: var(--crayon-tex) 0 0 / 36px 36px repeat;
+}
+.member .ms {
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  padding-left: 5px;
+}
+
+/* 近 7 天:一页横线本上用铅笔画的柱状图,柱子立在横线上 */
+.weekStat {
+  position: relative;
+  padding-top: var(--rl);
 }
 .weekHead {
+  position: relative;
+  top: 5px;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   flex-wrap: wrap;   /* 手机放不下时统计整体掉行,不在词中间断开 */
-  gap: 2px 12px;
+  gap: 0 12px;
+  line-height: var(--rl);
   color: var(--ink-soft);
 }
 .weekTitle {
-  font-size: 14px;
-  letter-spacing: .05em;
+  font-size: 15px;
   white-space: nowrap;
 }
 .weekTotal {
-  font-size: 14px;
-  color: var(--week-ink);
+  font-size: 15px;
+  color: var(--ink);
   white-space: nowrap;
 }
 .weekBars {
@@ -410,101 +586,106 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 9px;
   align-items: end;
-  margin-top: 6px;
-  padding: 20px 2px 0;
+  padding: var(--rl) 2px 0;
   overflow: visible;
 }
 .weekBar {
   appearance: none;
   display: block;
   position: relative;
+  isolation: auto;
   width: 100%;
-  height: 104px;
+  height: calc(var(--rl) * 4);
   min-width: 0;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
-  box-shadow: none;
   color: inherit;
   letter-spacing: 0;
   transform: none;
   cursor: pointer;
 }
+.weekBar::before, .weekBar::after,
+.wipeTrack::before, .wipeTrack::after { content: none; }
 .weekBar:hover,
 .weekBar:active {
   background: transparent;
-  box-shadow: none;
   transform: none;
 }
+/* 周柱=铅笔画的方框(角上出头)+ 斜线排线;悬停/选中时再用彩铅反方向涂一遍(JS 画的路径) */
 .weekPaint {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   overflow: visible;
-  transform: rotate(var(--tilt));
   transform-origin: 50% 100%;
-  transition: transform .18s ease;
 }
 .weekPaint path { vector-effect: non-scaling-stroke; }
-.weekPaint .wash1 { fill: var(--week-fill); transition: fill .16s ease; }
-.weekPaint .wash2 { fill: var(--week-wash2); transition: fill .16s ease; }
+.weekPaint .hl {
+  fill: none;
+  stroke: var(--crayon);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.weekPaint .hatch {
+  fill: none;
+  stroke: var(--pencil);
+  stroke-opacity: .5;
+  stroke-width: 1;
+  stroke-linecap: round;
+}
 .weekPaint .inkline {
   fill: none;
-  stroke: var(--line);
-  stroke-width: 2;
+  stroke: var(--pencil);
+  stroke-width: 1.5;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-.weekBar:hover .weekPaint,
-.weekBar.on .weekPaint {
-  transform: rotate(var(--tilt)) translateY(-2px);
-}
-.weekBar:hover .wash1, .weekBar.on .wash1 { fill: var(--week-fill-hover); }
-.weekBar:hover .wash2, .weekBar.on .wash2 { fill: var(--week-wash2-hover); }
+.weekPaint .zero { stroke-opacity: .45; }
+.weekBar:hover .hl, .weekBar.on .hl { opacity: .85; }
 .weekBar.pop .weekPaint { animation: week-pop .3s ease; }
 @keyframes week-pop {
-  0%   { transform: rotate(var(--tilt)) scale(1, 1); }
-  40%  { transform: rotate(var(--tilt)) translateY(-4px) scale(.94, 1.08); }
-  72%  { transform: rotate(var(--tilt)) scale(1.04, .96); }
-  100% { transform: rotate(var(--tilt)) scale(1, 1); }
+  0%   { transform: scale(1, 1); }
+  40%  { transform: translateY(-3px) scale(.95, 1.06); }
+  72%  { transform: scale(1.03, .97); }
+  100% { transform: scale(1, 1); }
 }
+/* 气泡=一小张纸条,框是 app.js 现画的(和按钮同一套) */
 .weekTip {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--h) + 10px);
+  bottom: calc(var(--h) + 12px);
   z-index: 2;
-  padding: 5px 12px;
-  color: var(--week-ink);
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: 12px 15px 11px 14px / 14px 11px 15px 12px;
-  box-shadow: var(--sh-md);
-  font-size: 12px;
+  padding: 3px 12px 4px;
+  color: var(--ink);
+  border: 1.3px solid var(--pencil);
+  border-radius: 8px;
+  box-shadow: var(--sh-float);
+  font-size: 14px;
+  line-height: 1.4;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, 4px) rotate(-.5deg);
+  transform: translate(-50%, 4px);
   transition: opacity .14s ease, transform .14s ease;
 }
-.weekTip::after {
+.weekTip.inked { border-color: transparent; }
+.weekTip.inked::after {
   content: "";
   position: absolute;
-  left: 50%;
-  bottom: -6.5px;
-  width: 9px;
-  height: 9px;
-  margin-left: -5px;
-  background: var(--card);
-  border-right: 2px solid var(--line);
-  border-bottom: 2px solid var(--line);
-  transform: rotate(45deg);
+  inset: -7.3px;
+  background: var(--pencil);
+  -webkit-mask: var(--ink-frame) 0 0 / 100% 100% no-repeat;
+  mask: var(--ink-frame) 0 0 / 100% 100% no-repeat;
 }
 .weekBar:hover .weekTip,
 .weekBar.on .weekTip {
   opacity: 1;
-  transform: translate(-50%, 0) rotate(-.5deg);
+  transform: translate(-50%, 0);
 }
 .weekTip .tipWipe { display: none; }
 .weekBar.wipeOn .tipTime { display: none; }
@@ -513,13 +694,13 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   display: block;
   width: 100%;
   height: 8px;
-  margin-top: -3px;
+  margin: -4px 0;                        /* 8px 高、上下各收 4px:这道线正好压在横线上,不占行 */
   overflow: visible;
 }
 .weekBase path {
   fill: none;
-  stroke: var(--stroke-soft);
-  stroke-width: 2;
+  stroke: var(--pencil);
+  stroke-width: 1.6;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
@@ -532,31 +713,34 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 }
 .weekLabel {
   display: block;
-  margin-top: 4px;
+  position: relative;
+  top: 5px;
+  line-height: var(--rl);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 14px;
 }
 .wipeDist {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 4px 14px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  min-height: calc(var(--rl) * 2);
+  padding-top: 5px;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 14px;
 }
 .wipeLabel {
-  font-size: 14px;
-  letter-spacing: .05em;
+  font-size: 15px;
+  line-height: var(--rl);
 }
 .wipeTrack {
   appearance: none;
   display: inline-flex;
+  margin-top: 4px;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
-  box-shadow: none;
   letter-spacing: 0;
   transform: none;
   cursor: pointer;
@@ -564,7 +748,6 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
 .wipeTrack:hover,
 .wipeTrack:active {
   background: transparent;
-  box-shadow: none;
   transform: none;
 }
 .wipeStrip {
@@ -573,22 +756,31 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   height: auto;
 }
 .wipeStrip path { vector-effect: non-scaling-stroke; }
+.wipeStrip .segHit { fill: transparent; }
+.wipeStrip .segHatch {
+  fill: none;
+  stroke: var(--pencil);
+  stroke-opacity: .5;
+  stroke-width: 1;
+  stroke-linecap: round;
+}
 .wipeStrip .segInk {
   fill: none;
-  stroke: var(--stroke-ink);
-  stroke-width: 1.6;
+  stroke: var(--pencil);
+  stroke-width: 1.3;
+  stroke-linecap: round;
   stroke-linejoin: round;
 }
 .wipeStrip text { font-family: var(--hand); }
 .wipeStrip .segNote {
   fill: var(--ink-soft);
-  font-size: 13px;
+  font-size: 14px;
   text-anchor: middle;
 }
 .wipeStrip .segLead {
   fill: none;
-  stroke: var(--stroke-soft);
-  stroke-width: 1.3;
+  stroke: var(--pencil-soft);
+  stroke-width: 1.1;
   stroke-linecap: round;
 }
 .wipeStrip .segHoverOnly { opacity: 0; transition: opacity .15s ease; }
@@ -607,77 +799,27 @@ button.ghost:hover { color: var(--accent); border-color: var(--accent-soft); bac
   100% { transform: scale(1, 1); }
 }
 
-.party {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));  /* 严格 4+4:上排 T+奶,下排 DPS(排序已按职能) */
-  gap: 12px;
-  margin-top: 18px;   /* 和标题行之间只靠留白分隔,不画线 */
-}
-/* 去框化:名字底下一道低饱和职能色水彩涂抹,图标 multiply 印进纸里 */
-.member {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  font-size: 15px;
-  min-width: 0;
-}
-.member.tank { --wash: rgba(110, 140, 176, .20); }
-.member.heal { --wash: rgba(120, 150, 104, .19); }
-.member.dps  { --wash: rgba(184, 116, 94, .17); }
-.member img {
-  width: 24px; height: 24px;
-  border-radius: 5px;
-  flex: none;
-  display: block;
-  mix-blend-mode: var(--member-blend);
-  filter: var(--member-filter);
-  opacity: var(--member-opacity);
-}
-.member .mn {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.25;
-}
-.member .mname {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 0 8px 1px;
-  background: var(--wash);
-  border-radius: 9px 13px 8px 12px / 12px 8px 13px 9px;
-}
-.party .member:nth-child(2n) .mname { border-radius: 12px 8px 13px 9px / 9px 13px 8px 12px; }
-.member .ms {
-  font-size: 13px;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  padding-left: 8px;
-}
-
 .msg {
-  margin: 26px 2px;
-  font-size: 16px;
+  margin: 26px 4px;
+  font-size: 17px;
   color: var(--ink-soft);
   line-height: 1.8;
   white-space: pre-wrap;
+  text-wrap: pretty;
 }
 .msg.err { color: var(--danger); }
-.notice { font-size: 14px; color: var(--ink-soft); margin: 4px 2px 12px; }
+.notice { font-size: 15px; color: var(--ink-soft); margin: 4px 4px 12px; }
 .notice.warn { color: var(--danger); }
 
-.emptyHistory { margin: 8px 2px; }
-.ehTitle { font-size: 14px; color: var(--ink-soft); letter-spacing: .08em; margin-bottom: 4px; }
+.emptyHistory { margin: 8px 4px; }
+.ehTitle { font-size: 15px; color: var(--ink-soft); margin-bottom: 10px; }
 
 .spin {
   margin: 34px auto;
   text-align: center;
   color: var(--ink-soft);
-  font-size: 15px;
-  letter-spacing: .2em;
+  font-size: 17px;
+  letter-spacing: .1em;
 }
 .spin::after {
   content: "…";
@@ -691,73 +833,90 @@ footer {
   max-width: 880px;
   width: 100%;
   margin: 0 auto;
-  padding: 14px 24px 30px;
+  padding: 18px 24px 30px;
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-soft);
-  background-image: var(--ink-dash);
-  background-repeat: repeat-x;
-  background-position: left top;
   position: relative;
 }
+footer::before { left: 24px; right: 24px; }
 #points { white-space: nowrap; }
 
-/* ---------- 设置 ---------- */
+/* ---------- 设置 = 一张餐巾纸 ---------- */
 dialog {
   font-family: var(--hand);
   color: var(--ink);
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: var(--wobble-a);
-  padding: 26px 28px;
-  width: min(460px, 92vw);
-  box-shadow: var(--sh-xl);
+  border: 0;
+  border-radius: 0;
+  padding: 34px 38px 30px;
+  width: min(470px, 92vw);
+  box-shadow: 0 2px 4px rgba(60, 48, 34, .1), 0 30px 60px -24px rgba(60, 48, 34, .5);
 }
 dialog::backdrop { background: var(--backdrop); }
-dialog h2 { margin: 0 0 10px; font-size: 22px; letter-spacing: .06em; }
-dialog .note { font-size: 14px; color: var(--ink-soft); line-height: 1.7; margin: 0 0 16px; }
-dialog .note code { font-family: inherit; background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
-dialog a { color: var(--accent); }
-dialog label {
-  display: block;
-  font-size: 14px;
-  color: var(--ink-soft);
-  margin-bottom: 12px;
-  letter-spacing: .05em;
+dialog h2 {
+  position: relative;
+  width: fit-content;
+  margin: 0 0 22px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
 }
+dialog .note { font-size: 15px; color: var(--ink-soft); line-height: 1.7; margin: 0 0 16px; }
+dialog .note code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: var(--code-bg); padding: 1px 4px; border-radius: 2px; }
+dialog a { color: var(--accent); }
+/* 表单:标签是小字,输入就是写在一道铅笔线上 */
+dialog label {
+  position: relative;
+  display: block;
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+dialog label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 7px;
+  background: var(--pencil-soft);
+  -webkit-mask: var(--pencil-line) 0 0 / 100% 100% no-repeat;
+  mask: var(--pencil-line) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+dialog label:focus-within::after { background: var(--pencil); }
 dialog input {
   display: block;
   width: 100%;
-  margin-top: 5px;
+  margin-top: 2px;
   font: inherit;
-  font-size: 15px;
-  padding: 8px 12px;
-  border: 2px solid var(--line-soft);
-  border-radius: 12px 16px 13px 17px / 16px 12px 17px 13px;
-  background: var(--input-bg);
+  font-size: 16px;
+  padding: 4px 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--ink);
   outline: none;
 }
-dialog input:focus { border-color: var(--accent-soft); }
-dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-start; gap: 10px; margin-top: 18px; }
+dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-start; gap: 14px; margin-top: 22px; }
+dialog .row button { font-size: 16px; padding: 8px 22px 7px; }
+dialog .row button.ghost { font-size: 15px; padding: 7px 16px 6px; }
 
 /* 登录区 */
 #authBox { margin: 4px 0 4px; }
 #authBox .loginBtn { display: block; width: 100%; }
-#authBox .hint { font-size: 13px; color: var(--ink-soft); text-align: center; margin: 10px 0 0; }
+#authBox .hint { font-size: 14px; color: var(--ink-soft); text-align: center; margin: 12px 0 0; }
 #authBox .note { margin-bottom: 4px; }
 .authRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.authRow .authName { font-size: 15px; letter-spacing: .04em; }
+.authRow .authName { font-size: 16px; }
 #advBox {
-  margin-top: 16px;
+  margin-top: 18px;
   padding-top: 14px;
-  background-image: var(--ink-dash);
-  background-repeat: repeat-x;
-  background-position: left top;
+  border-top: 1.3px dashed var(--pencil-soft);
 }
-#advBox summary { cursor: pointer; font-size: 14px; color: var(--ink-soft); letter-spacing: .05em; margin-bottom: 12px; }
+#advBox summary { cursor: pointer; font-size: 15px; color: var(--ink-soft); margin-bottom: 12px; }
 #advBox summary:hover { color: var(--accent); }
 
 /* 大屏整页等比放大(设计基准≈笔记本 1440 宽);zoom 会放大 100vh,故 min-height 同步除回去,免得整页超一屏要下拉 */
@@ -765,34 +924,42 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
 @media (min-width: 2200px) { body { zoom: 1.45; min-height: calc(100vh / 1.45); } }
 @media (min-width: 3200px) { body { zoom: 1.9;  min-height: calc(100vh / 1.9); } }
 
-/* ★ 断点 740 不是拍脑袋:header 一行放得下要 322(brand)+77+112+138+3*10(gap)+48(padding)=727,
+/* ★ 断点 740 不是拍脑袋:header 一行放得下要 248(brand)+71+105+142(英文「Log in to FF Logs」)+3*10(gap)+48(padding)=644,
    窄于这个数「No memes」和「登录 FF Logs」就会各折成两行(560 那版在 600~720 宽必崩)。
-   改 header 里任何一个元素的宽度都要重算这个数。 */
+   手机那一套规则也挂在这个断点上。改 header 里任何一个元素的宽度都要重算这个数。 */
 @media (max-width: 740px) {
   /* 窄窗标题和三个按钮挤一行会把「No memes」和「登录 FF Logs」都折断,改成标题独占一行 */
   /* 三个按钮靠右成一簇,和宽屏时它们贴在右边是同一个读法;space-between 会把它们撒开,看着像随手摆的 */
   header { flex-wrap: wrap; justify-content: flex-end; }
-  header .brand { flex: 1 0 100%; margin-bottom: 12px; }
+  header .brand { flex: 1 0 100%; margin-bottom: 14px; }
   .brand h1 { white-space: nowrap; }
   #settingsBtn { white-space: nowrap; }
   .brandTop { gap: 10px; }
-  .brandIcon { width: 46px; height: 46px; border-radius: 14px; }
+  .brandIcon { width: 44px; height: 44px; border-radius: 10px; }
   .charHead .charJob { width: 32px; height: 32px; }
-  .charHead .whoName { font-size: 23px; }
+  .charHead .whoName { font-size: 25px; }
   .brand h1 { font-size: 32px; }
-  header { padding-top: 30px; }
-  button.ghost { font-size: 12px; padding: 6px 10px; }
+  header { padding-top: 28px; }
+  main { padding-left: 16px; padding-right: 16px; }
+  .napkin { padding: 28px 24px 22px; }
+  #q { font-size: 17px; }
+  :root { --go-w: 84px; }
+  #go { font-size: 16px; }
+  button.ghost { font-size: 12px; padding: 5px 10px 6px; }
   .themeToggle .tw { font-size: 11px; }
   html[data-theme="light"] .themeToggle .tw.light,
   html[data-theme="dark"]  .themeToggle .tw.dark,
   html[data-lang="zh"] .themeToggle .tw.zh,
   html[data-lang="en"] .themeToggle .tw.en { font-size: 14px; }
+  .card { --pad: 18px; }
   .weekBars, .weekDays { gap: 6px; }
-  .weekBar { height: 88px; }
+  .weekBar { height: calc(var(--rl) * 3); }
   .weekTotal { white-space: normal; text-align: right; }
   .wipeTrack { max-width: 100%; }
   .party { grid-template-columns: repeat(2, minmax(0, 1fr)); }  /* 手机放不下 4 列,降为 2 列仍保持 T奶在前 */
-  .card .status { white-space: normal; }  /* 长进度词条允许换行,笔刷会罩住整块 */
+  .card .status { white-space: normal; }  /* 长进度词条允许换行,彩铅会罩住整块 */
+  footer { padding-left: 16px; padding-right: 16px; }
+  footer::before { left: 16px; right: 16px; }
 }
 
 /* ---------- 主题切换按钮 ---------- */
@@ -800,9 +967,8 @@ dialog .row { display: flex; flex-direction: row-reverse; justify-content: flex-
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  border-radius: 12px 16px 13px 17px / 16px 12px 17px 13px;
   letter-spacing: 0;
-  padding: 8px 14px;
+  padding: 6px 13px 7px;
 }
 .themeToggle .tw,
 .themeToggle .sep {
@@ -816,25 +982,28 @@ html[data-lang="zh"] .themeToggle .tw.zh,
 html[data-lang="en"] .themeToggle .tw.en {
   font-size: 16px;
   font-weight: 700;
-  color: var(--accent-soft);
+  color: var(--accent);
 }
-header .brand { margin-right: auto; }
-header { gap: 10px; }
-/* ---------- 暗色模式:哥特手抄本(黑羊皮纸 · 骨白墨 · 烛金 · 血陶土 · 彩窗紫) ----------
-   原则: 不是把亮色调暗,是同一支笔换到夜里的另一本册子。
-   纸=烧焦的黑褐,墨=象牙白,光=蜡烛的蜜色,强调色=干掉的血红,周柱=黄铜烛台。
-   整套是暖的:暗色里除了阴影没有冷色,冷紫会立刻破坏烛光感。 */
+
+/* ---------- 暗色模式:夜里的桌子(烧焦的黑褐桌面 · 深色纸 · 骨白字 · 玫瑰色彩铅) ----------
+   原则: 不是把亮色调暗,是同一张桌子到了夜里,只点着蜡烛。
+   纸=深褐,字=象牙白,光=蜡烛的蜜色,彩铅=干掉的玫瑰红。
+   整套是暖的:暗色里除了阴影没有冷色,冷紫会立刻破坏烛光感。
+   2026-09 起收成方正、少装饰:hover 光晕、标题余晖、柱子外发光都拿掉了,颜色本身不动。 */
 html[data-theme="dark"] {
   color-scheme: dark;
-  /* 表面:黑羊皮纸;card 抬起一档,靠明度而不是描边分层 */
-  --paper: #0f0c0a;
-  --card: #241e17;                       /* 比 paper 亮两档:黑底上卡片要靠明度立起来,不靠描边 */
+  --desk: #0f0c0a;
+  --napkin: #1d1814;
+  --sheet: #201a15;
+  --card: #251e18;
   /* 墨:骨白 / 旧羊皮 */
   --ink: #efe4cf;                        /* 象牙白,被烛光照到的那一档 */
   --ink-soft: #9d8f77;
-  /* 描边=淡骨白,压得很低,像烛光下的铅笔线 */
-  --line: rgba(232, 214, 178, .28);
-  --line-soft: rgba(232, 214, 178, .14);
+  --pencil: rgba(239, 228, 207, .7);
+  --pencil-soft: rgba(239, 228, 207, .28);
+  --line: rgba(232, 214, 178, .14);
+  --line-soft: rgba(232, 214, 178, .08);
+  --rule: rgba(232, 214, 178, .075);
   /* ★ 暗色只有一个色系:画里那束暗红玫瑰。按明度分工,不按色相分工——
      深的(#7a2a22 / #963a2c)做块面(按钮/柱子),亮一档的(#b06a55)做文字和描边才读得清。
      关键是压饱和度:偏粉的亮鲑红(旧的 #d4685a)画里根本没有,一亮一饱就穿帮。
@@ -846,91 +1015,41 @@ html[data-theme="dark"] {
   --rose-lit: #c2757a;                   /* H356 玫瑰受光面:文字/描边 */
   --rose: #8f3038;                       /* H355 玫瑰主体 */
   --rose-deep: #74232a;                  /* H355 玫瑰暗部:实心块面 */
-  /* 分工改成按明度而不是色相:玫瑰暗部(rose-deep/rose)做「块面」(按钮/柱子/选中 chip),
-     玫瑰受光面(rose-lit)做「线和字」(链接/描边/焦点圈/柱子勾边/hover 光晕)。
-     整页只有这一支色相在走明度,hover 和 active 自然就统一了。 */
-  --accent: var(--rose-lit);             /* 玫瑰受光面:链接 / 高亮词 / hover 文字 */
-  --accent-soft: #b0555c;                /* 玫瑰中调:描边 / 焦点圈 */
+  --margin-rule: rgba(194, 117, 122, .5);
+  --crayon: var(--rose-lit);             /* 彩铅=玫瑰受光面;涂色的底=玫瑰暗部 */
+  --crayon-fill: rgba(116, 35, 42, .5);
+  --crayon-tex-alpha: .38;
+  --crayon-ink: var(--rose);             /* 按钮里的彩铅涂色用玫瑰主体,受光面太亮会盖住骨白字 */
+  --accent: var(--rose-lit);
   --danger: #e08a6b;                     /* 报错另留一支更亮的余烬,别和普通链接同色 */
-  --heal: #7d9c68;
-  /* 周柱=玫瑰暗红的块面,和按钮同一支色 */
-  --week-fill: rgba(143, 48, 56, .60);
-  --week-fill-hover: rgba(170, 62, 72, .74);
-  --week-ink: rgba(228, 202, 160, .94);
-  --ink-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='5' viewBox='0 0 132 5'%3E%3Cg fill='none' stroke='%23985158' stroke-width='1.4' stroke-linecap='round' opacity='.62'%3E%3Cpath d='M2 2.8Q7 1.9 12 2.4'/%3E%3Cpath d='M19 2.2Q26 3.1 31 2.5'/%3E%3Cpath d='M38 2.9Q42 2.2 47 2.6'/%3E%3Cpath d='M54 2.3Q60 3.1 66 2.4'/%3E%3Cpath d='M72 2.7Q76 2 81 2.5'/%3E%3Cpath d='M88 2.2Q95 3 101 2.6'/%3E%3Cpath d='M108 2.8Q113 2.1 118 2.5'/%3E%3Cpath d='M124 2.4Q127 2.9 130 2.5'/%3E%3C/g%3E%3C/svg%3E");
-  /* 笔刷:暗底上必须比字暗,否则字被盖住(亮色是反过来的) */
-  --brush-green-1: rgba(76, 96, 52, .42);
-  --brush-green-2: rgba(76, 96, 52, .36);
-  --brush-orange-1: rgba(140, 50, 52, .48);
-  --brush-orange-2: rgba(140, 50, 52, .42);
-  --wipe-fill: rgb(143, 48, 56);
+  /* 彩铅高光:暗底上必须比字暗,否则字被盖住(亮色是反过来的) */
+  --brush-green-1: rgba(118, 146, 84, .5);
+  --brush-green-2: rgba(76, 96, 52, .3);
+  --brush-orange-1: rgba(194, 117, 122, .45);
+  --brush-orange-2: rgba(140, 50, 52, .32);
+  --desk-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
+  --fiber: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5 .1' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.38 2 0 0 0 -1.2'/%3E%3C/filter%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 2.6 0 0 0 -1.45'/%3E%3C/filter%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.35 0 0 0 0 0.28 2.6 0 0 0 -1.5'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23a)' opacity='.05'/%3E%3Crect width='240' height='240' filter='url(%23c)' opacity='.06'/%3E%3Crect width='240' height='240' filter='url(%23d)' opacity='.1'/%3E%3C/svg%3E");
   /* 氛围:顶上一片被烛火烘暖的空气,左下角一盏将熄的烛 */
   --glow: #2a2016;
   /* 两盏烛:左下近、右下远。别再加第三盏,三个光源就没有方向感了 */
-  --glow-2: rgba(206, 132, 46, .15);
-  --glow-3: rgba(196, 118, 44, .10);
+  --glow-2: rgba(206, 132, 46, .12);
+  --glow-3: rgba(196, 118, 44, .07);
   /* 压边用暖近黑(不是纯黑),范围放大、收得慢——纯黑 .80 会把下半页压成一块死掉的黑板 */
   --vignette: radial-gradient(128% 96% at 50% 30%, transparent 44%, rgba(10, 6, 4, .74) 100%);
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
   --selection: rgba(160, 52, 62, .34);
-  /* 平涂,不要渐变/内高光:那层反光一上来就变塑料按钮,和整页手绘不是一路。
-     玫瑰暗部,和柱子同一支色 */
-  --btn-bg: var(--rose-deep);
-  --btn-bg-hover: var(--rose);
-  --btn-fg: #f4e5c9;
-  --btn-edge: rgba(0, 0, 0, .55);
-  /* 状态色:提到骨白那一档,才压得住底下的笔刷 */
+  /* 状态色:提到骨白那一档,才压得住底下的彩铅 */
   --status-clear: #a2bb80;               /* 苔绿,不用薄荷绿:冷绿在烛光里是脏的 */
   --status-prog: #d4816a;                /* 余烬,不是橙:和玫瑰同一头暖调,别再往黄里跑 */
-  --hover-wash: #2b241c;
-  --input-bg: #171310;
-  --code-bg: #272017;
-  --chip-on-bg: var(--rose-deep);        /* 选中的副本=一块被点亮的暗红牌子,不是淡色底 */
-  --week-wash2: rgba(116, 35, 42, .54);
-  --week-wash2-hover: rgba(140, 46, 54, .68);
-  --stroke-soft: rgba(232, 214, 178, .24);
-  --stroke-ink: rgba(232, 214, 178, .32);
-  --backdrop: rgba(8, 5, 3, .70);
-  /* 戳影:近黑纸上纯黑更黑一档,手绘厚度还在 */
-  --sh-sm: 2px 3px 0 rgba(0, 0, 0, .45);
-  --sh-md: 3px 4px 0 rgba(0, 0, 0, .50);
-  --sh-lg: 4px 6px 0 rgba(0, 0, 0, .48);
-  --sh-xl: 6px 8px 0 rgba(0, 0, 0, .60);
-  --sh-btn: 3px 4px 0 rgba(0, 0, 0, .52);
-  --sh-btn-press: 1px 1px 0 rgba(0, 0, 0, .52);
-  --sh-chip: 2px 3px 0 rgba(0, 0, 0, .42);
-  --sh-chip-press: 1px 1px 0 rgba(0, 0, 0, .42);
-  --icon-drop: drop-shadow(3px 4px 0 rgba(0, 0, 0, .55));
+  --hover-wash: rgba(232, 214, 178, .05);
+  --code-bg: #2b231b;
+  --backdrop: rgba(8, 5, 3, .7);
+  --sh-paper: 0 1px 2px rgba(0, 0, 0, .45), 0 14px 28px -16px rgba(0, 0, 0, .8);
+  --sh-float: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 34px -14px rgba(0, 0, 0, .7);
   /* 职业图标:不能 multiply(会糊成黑块); 暗底要提一点亮度才看得清纹章 */
   --member-blend: normal;
-  --member-filter: saturate(.95) brightness(1.14) contrast(1.02);
-  --member-opacity: .95;
+  --member-filter: saturate(.8) brightness(1.1);
+  --member-opacity: .92;
 }
-/* 职能 wash:暗底上同色相压深,像彩窗玻璃而不是荧光笔 */
-html[data-theme="dark"] .member.tank { --wash: rgba(86, 102, 126, .20); }
-html[data-theme="dark"] .member.heal { --wash: rgba(94, 116, 80, .19); }
-html[data-theme="dark"] .member.dps  { --wash: rgba(150, 84, 60, .22); }
 /* 头像纹章:白底 app 图标在近黑页面上是最刺眼的一块,压到烛光够得着的亮度 */
-html[data-theme="dark"] .brandIcon { filter: var(--icon-drop) brightness(.7) saturate(.84) contrast(1.04); }
-
-/* 卡片/浮层:顶边一道极淡的骨白高光,黑底上才有厚度,不然是一块死掉的深色矩形 */
-html[data-theme="dark"] .card { box-shadow: var(--sh-lg), inset 0 1px 0 rgba(238, 216, 172, .08); }
-html[data-theme="dark"] .sugg { box-shadow: var(--sh-lg), inset 0 1px 0 rgba(238, 216, 172, .08); }
-html[data-theme="dark"] dialog { box-shadow: var(--sh-xl), inset 0 1px 0 rgba(238, 216, 172, .09); }
-/* 标题:远处一盏烛的余晖 */
-html[data-theme="dark"] .brand h1 { text-shadow: 0 0 24px rgba(138, 32, 40, .46); }
-/* hover 时点一盏烛:暗底上光晕比换底色更像「被照到」。
-   ★ 必须排掉 .weekBar / .wipeTrack:它们也是 <button>,自己把 box-shadow 清成 none 了,
-   这条规则特异性更高会把方形按钮阴影糊回去(柱子上凸出一个方块就是这么来的)。 */
-html[data-theme="dark"] button:hover:not(.ghost):not(.chip):not(.weekBar):not(.wipeTrack) { box-shadow: var(--sh-btn), 0 0 17px rgba(146, 34, 42, .48); }
-html[data-theme="dark"] .ghost:hover { box-shadow: var(--sh-sm), 0 0 13px rgba(146, 34, 42, .38); }
-html[data-theme="dark"] .chip:hover  { box-shadow: var(--sh-chip), 0 0 13px rgba(146, 34, 42, .42); }
-html[data-theme="dark"] .chip.on     { box-shadow: var(--sh-chip), 0 0 15px rgba(146, 34, 42, .46); }
-/* 柱子=一排烛台,给它一圈烛光;灭点条同理 */
-/* 柱子/灭点条:玫瑰红的体块 + 一道烛光描边和外晕,才不是平铺的红方块 */
-html[data-theme="dark"] .weekPaint { filter: drop-shadow(0 0 6px rgba(140, 32, 40, .38)); }
-html[data-theme="dark"] .wipeSegG  { filter: drop-shadow(0 0 4px rgba(140, 32, 40, .32)); }
-html[data-theme="dark"] .weekPaint .inkline { stroke: rgba(198, 122, 126, .62); }
-html[data-theme="dark"] .wipeStrip .segInk  { stroke: rgba(198, 122, 126, .52); }
-/* 选中 chip:暗红牌子 + 比它亮一档的边,不要 rose-lit 那道亮粉描边(在近黑页面上就是霓虹管) */
-html[data-theme="dark"] .chip.on { border-color: #a04c52; color: var(--ink); }
+html[data-theme="dark"] .brandIcon { filter: brightness(.7) saturate(.84) contrast(1.04); }
+html[data-theme="dark"] dialog { box-shadow: 0 2px 4px rgba(0, 0, 0, .4), 0 30px 60px -20px rgba(0, 0, 0, .8); }

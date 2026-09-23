@@ -1,7 +1,7 @@
 /* No memes — 仅缓存本站静态资源，绝不代理 cn.fflogs.com（省点数 + 避免脏数据） */
 "use strict";
 
-const CACHE = "no-memes-static-v15";
+const CACHE = "no-memes-static-v16";
 const PRECACHE = [
   "./",
   "./app.js",
@@ -9,6 +9,7 @@ const PRECACHE = [
   "./manifest.webmanifest",
   "./favicon.ico",
   "./fonts/lxgwwenkaiscreen.css",
+  "./fonts/kalam.css",
   "./icons/app-icon-192.png",
   "./icons/app-icon-512.png",
   "./icons/favicon.png",
