@@ -942,9 +942,8 @@ function sketchBox(x, y, w, h, rnd, over, bottom = true) {
 }
 
 /* 斜线排线:在方框里画一组大致平行的斜线,比 45° 稍陡(手腕自然的角度)。
-   手排的线不齐:每根角度差一点、间距忽疏忽密、两头有的没够到边有的冲出去一点、线身微微弯。
-   flip=true 反方向,叠一层就是交叉排线 */
-function hatchPath(x, y, w, h, gap, rnd, flip) {
+   手排的线不齐:每根角度差一点、间距忽疏忽密、两头有的没够到边有的冲出去一点、线身微微弯 */
+function hatchPath(x, y, w, h, gap, rnd) {
   const f = v => v.toFixed(1);
   let d = "";
   for (let c = x - h / 1.35 + gap * (.3 + .5 * Math.abs(rnd())); c < x + w; c += gap * (.75 + .5 * Math.abs(rnd()))) {
@@ -952,8 +951,7 @@ function hatchPath(x, y, w, h, gap, rnd, flip) {
     const t0 = Math.max(-.6, Math.max(0, (x - c) * k) + Math.abs(rnd()) * 1.8 - .5);
     const t1 = Math.min(h + .6, Math.min(h, (x + w - c) * k) - Math.abs(rnd()) * 1.8 + .5);
     if (t1 - t0 < 1.2) continue;
-    let ax = c + t0 / k, bx = c + t1 / k;
-    if (flip) { ax = 2 * x + w - ax; bx = 2 * x + w - bx; }
+    const ax = c + t0 / k, bx = c + t1 / k;
     const ay = y + h - t0, by = y + h - t1, bend = rnd() * .5;
     d += `M${f(ax)},${f(ay)}Q${f((ax + bx) / 2 + bend)},${f((ay + by) / 2 + bend)} ${f(bx)},${f(by)}`;
   }
@@ -967,7 +965,7 @@ function svgEl(tag, attrs, parent) {
   return e;
 }
 
-/* 比例分段的灭点条:段长∝次数,每段是钢笔方框+排线,排线按在场 P 数从疏到密(最后几段交叉排线)。
+/* 比例分段的灭点条:段长∝次数,每段是钢笔方框+排线,排线按在场 P 数从疏到密。
    数字全部写在条下方当轴注记(块内无字);和左邻打架的注记降一行用引线避让 */
 function wipeStrip(entries, W, H, rnd) {
   const total = entries.reduce((n, [, c]) => n + c, 0);
@@ -980,7 +978,7 @@ function wipeStrip(entries, W, H, rnd) {
     /* ponytail: 最小段宽会让总宽略超出 W,溢出几像素无感,不做归一化 */
     const w = Math.max(10, usable * n / total);
     const t = k === 1 ? .5 : i / (k - 1);   // 0=最早的 P,1=最远的 P
-    segs.push({ p, n, x, w, cx: x + w / 2, gap: 6.5 - 3.8 * t, cross: k >= 3 && t > .7 });
+    segs.push({ p, n, x, w, cx: x + w / 2, gap: 6.5 - 3.8 * t });
     x += w + gap;
   });
 
@@ -993,7 +991,7 @@ function wipeStrip(entries, W, H, rnd) {
   for (const s of segs) {
     const g = svgEl("g", { class: "wipeSegG" }, svg);
     svgEl("rect", { x: s.x, y: 1, width: s.w, height: H - 2, class: "segHit" }, g);   // 排线之间的空隙也要能点到
-    svgEl("path", { d: hatchPath(s.x, 2, s.w, H - 4, s.gap, rnd) + (s.cross ? hatchPath(s.x, 2, s.w, H - 4, s.gap * 1.3, rnd, true) : ""), class: "segHatch" }, g);
+    svgEl("path", { d: hatchPath(s.x, 2, s.w, H - 4, s.gap, rnd), class: "segHatch" }, g);
     svgEl("path", { d: sketchBox(s.x, 1, s.w, H - 2, rnd, 1.6), class: "segInk" }, g);
     const label = `P${s.p}×${s.n}`;
     const half = lw(s) / 2;
@@ -1050,11 +1048,10 @@ function weeklyChart(stat) {
       `${d.label}, ${d.pulls} pulls, ${durationText(d.ms)}, ${phaseText(d.wipes)}`));
 
     const paint = svgEl("svg", { class: "weekPaint", viewBox: "0 0 100 104", preserveAspectRatio: "none", "aria-hidden": "true" });
-    /* 铅笔画的柱子:三条边各一笔(底边就是基线),里面斜线排线;悬停/选中时再用彩铅反方向涂一遍 */
+    /* 铅笔画的柱子:三条边各一笔(底边就是基线),里面斜线排线;悬停/选中时线条换成彩铅色(CSS) */
     const x = 21, w = 58;
     if (d.ms) {
       const h = Math.max(8, d.ms / max * 96), top = 102 - h;
-      svgEl("path", { d: hatchPath(x + 1, top + 1.5, w - 2, h - 1.5, 3.4, rnd, true), class: "hl" }, paint);
       svgEl("path", { d: hatchPath(x + 1, top + 1.5, w - 2, h - 1.5, 5, rnd), class: "hatch" }, paint);
       svgEl("path", { d: sketchBox(x, top, w, h, rnd, 2.6, false), class: "inkline" }, paint);
     } else {
@@ -1675,11 +1672,26 @@ function edgeElement(el) {
   el.classList.add("edged");
 }
 
-// 按钮/气泡的框和纸边共用一套观察:尺寸一变(首次 observe 也算)就重画
-const inkRO = new ResizeObserver(entries => entries.forEach(e => (e.target.matches(EDGE_SEL) ? edgeElement : inkElement)(e.target)));
+/* 输入框选中时的框:和按钮同一支笔,画在输入框外面 6px 一圈。input 不能有伪元素,
+   所以框挂在 .searchWrap 的 --q-frame 上,由 ::before 显示;宽跟输入框,高跟整行 */
+const FOCUS_GAP = 6;   // 和 CSS 里 .searchWrap::before 的 -12px(= 6 + INK_PAD)对上
+const FOCUS_SEL = ".searchWrap";
+
+function focusFrame(wrap) {
+  const w = wrap.querySelector("#q").offsetWidth, h = wrap.offsetHeight;
+  if (!w || !h || wrap._inkSize === w + "x" + h) return;
+  wrap._inkSize = w + "x" + h;
+  const svg = inkFrame(w + 2 * FOCUS_GAP, h + 2 * FOCUS_GAP, hashSeed("q"), 1.4);
+  wrap.style.setProperty("--q-frame", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+  wrap.classList.add("inked");
+}
+
+// 按钮/气泡的框、输入框的框和纸边共用一套观察:尺寸一变(首次 observe 也算)就重画
+const inkRO = new ResizeObserver(entries => entries.forEach(({ target: t }) =>
+  (t.matches(EDGE_SEL) ? edgeElement : t.matches(FOCUS_SEL) ? focusFrame : inkElement)(t)));
 function inkScan(node, fn) {
   if (node.nodeType !== 1) return;
-  const sel = INK_SEL + ", " + EDGE_SEL;
+  const sel = INK_SEL + ", " + EDGE_SEL + ", " + FOCUS_SEL;
   if (node.matches(sel)) fn(node);
   node.querySelectorAll(sel).forEach(fn);
 }

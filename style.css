@@ -17,7 +17,7 @@
   --line: rgba(45, 41, 37, .16);
   --line-soft: rgba(45, 41, 37, .08);
   --rule: rgba(128, 112, 90, .2);       /* 横线本印好的横线:暖灰 */
-  --margin-rule: rgba(214, 112, 82, .6);  /* 抬头下面那道红线 */
+  --margin-rule: rgba(128, 112, 90, .42);  /* 抬头下面那道线:和横线同一种暖灰,深一档 */
   --rl: 30px;                           /* 横线间距:横线本里的东西都按它排 */
   --crayon: #d4704f;                    /* 陶土色彩铅 */
   --crayon-fill: rgba(236, 160, 130, .26);
@@ -264,6 +264,24 @@ dialog,
   pointer-events: none;
 }
 .searchWrap:focus-within::after { background: var(--pencil); }
+/* 选中输入框时的框:app.js 现画的钢笔框(和按钮同一支笔),框在输入框外 6px;
+   伪元素 = 框 + 画布余量 6px,所以四周 -12px。没画好时退回上面那道虚线 outline */
+.searchWrap::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  bottom: -12px;
+  left: -12px;
+  right: calc(var(--go-w) + 18px - 12px);
+  background: var(--accent);
+  -webkit-mask: var(--q-frame) 0 0 / 100% 100% no-repeat;
+  mask: var(--q-frame) 0 0 / 100% 100% no-repeat;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+}
+.searchWrap.inked #q:focus-visible { outline: none; }
+.searchWrap.inked:has(#q:focus-visible)::before { opacity: 1; }
 #q {
   flex: 1;
   min-width: 0;
@@ -613,7 +631,7 @@ footer::before {
   background: transparent;
   transform: none;
 }
-/* 周柱=铅笔画的方框(角上出头)+ 斜线排线;悬停/选中时再用彩铅反方向涂一遍(JS 画的路径) */
+/* 周柱=铅笔画的方框(角上出头)+ 斜线排线;悬停/选中时线条换成彩铅色 */
 .weekPaint {
   position: absolute;
   inset: 0;
@@ -622,15 +640,7 @@ footer::before {
   overflow: visible;
   transform-origin: 50% 100%;
 }
-.weekPaint path { vector-effect: non-scaling-stroke; }
-.weekPaint .hl {
-  fill: none;
-  stroke: var(--crayon);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  opacity: 0;
-  transition: opacity .16s ease;
-}
+.weekPaint path { vector-effect: non-scaling-stroke; transition: stroke .16s ease; }
 .weekPaint .hatch {
   fill: none;
   stroke: var(--pencil);
@@ -646,7 +656,7 @@ footer::before {
   stroke-linecap: round;
 }
 .weekPaint .zero { stroke-opacity: .45; }
-.weekBar:hover .hl, .weekBar.on .hl { opacity: .85; }
+.weekBar:hover .weekPaint path, .weekBar.on .weekPaint path { stroke: var(--crayon); }
 .weekBar.pop .weekPaint { animation: week-pop .3s ease; }
 @keyframes week-pop {
   0%   { transform: scale(1, 1); }
@@ -1015,7 +1025,7 @@ html[data-theme="dark"] {
   --rose-lit: #c2757a;                   /* H356 玫瑰受光面:文字/描边 */
   --rose: #8f3038;                       /* H355 玫瑰主体 */
   --rose-deep: #74232a;                  /* H355 玫瑰暗部:实心块面 */
-  --margin-rule: rgba(194, 117, 122, .5);
+  --margin-rule: rgba(232, 214, 178, .2);
   --crayon: var(--rose-lit);             /* 彩铅=玫瑰受光面;涂色的底=玫瑰暗部 */
   --crayon-fill: rgba(116, 35, 42, .5);
   --crayon-tex-alpha: .38;
