@@ -752,7 +752,9 @@ function memberChip(p) {
   img.onerror = () => img.remove();
   d.appendChild(img);
   const n = el("span", "mn");
-  n.appendChild(el("span", "mname", p.name || "?"));
+  const nm = el("span", "mname", p.name || "?");
+  if (p.me) nm.style.setProperty("--me-mark", crayonMask(hashSeed(p.name || "?"), p.name));
+  n.appendChild(nm);
   if (p.server) n.appendChild(el("span", "ms", "@" + p.server));
   d.appendChild(n);
   return d;
@@ -790,26 +792,69 @@ function pullCard(title, pull, statusText, statusCls, extraWhen, weekStat) {
   return card;
 }
 
-/* 状态词底下用彩铅涂一道:一层很淡的底色 + 来回的短斜线,两头涂得参差不齐。
+/* 状态词底下用彩铅涂一道:一层很淡的底色 + 来回的短斜线。
    viewBox 宽度按字数估出来,和实际尺寸接近 1:1,斜线不会被横向拉歪;铺满徽章仍靠 preserveAspectRatio=none */
 function brushStroke(seed, brush, text) {
   const prefix = brush || "--brush-green";
   const rnd = seededRand(seed);
-  const W = Math.max(40, [...(text || "")].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e80 ? 15 : 8), 22));
+  const W = crayonWidth(text, 22);
   const H = 28;
+  const m = crayonMark(W, H, 4.5, H - 3.5, rnd);
   const svg = svgEl("svg", { class: "badgeBrush", viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true" });
-  svgEl("path", { d: markerPath(1, W - 1, 5 + rnd() * .6, H - 3 + rnd() * .5, 4, rnd), fill: `var(${prefix}-2)` }, svg);
-  svgEl("path", { d: hatchPath(3, 4, W - 6, H - 7, 3, rnd), class: "crayon", stroke: `var(${prefix}-1)` }, svg);
+  svgEl("path", { d: m.band, fill: `var(${prefix}-2)` }, svg);
+  svgEl("path", { d: m.hatch, class: "crayon", stroke: `var(${prefix}-1)` }, svg);
   return svg;
 }
 
-/* 马克笔的一笔:上下边几乎是直的(只有纸面带来的细小毛边),左右两端平行斜切 */
-function markerPath(x0, x1, y0, y1, slant, rnd) {
-  const n = Math.max(2, Math.round((x1 - x0) / 12));
+// 按字数估宽度:中文 15、其他 8,再加两侧留白 pad
+function crayonWidth(text, pad, min = 40) {
+  return Math.max(min, [...(text || "")].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e80 ? 15 : 8), pad));
+}
+
+/* 彩铅涂的一块:上下边跟着一道缓弯起伏,每根线有的没够到边、有的冲出去一点;
+   两头是一根根线停下的地方,参差不齐,淡色底也跟着收成不规则的一头——不是尺子裁出来的色带 */
+function crayonMark(W, H, y0, y1, rnd) {
+  const f = v => v.toFixed(1);
+  const edge = y => {
+    const a = [9 + 6 * Math.abs(rnd()), rnd() * 6, 3 + 2 * Math.abs(rnd()), rnd() * 6];
+    return x => y + .7 * Math.sin(x / a[0] + a[1]) + .3 * Math.sin(x / a[2] + a[3]);
+  };
+  const top = edge(y0), bot = edge(y1);
+  const xl = 2 + 3 * Math.abs(rnd()), xr = W - 2 - 3 * Math.abs(rnd());
+  // 斜线:比 45° 稍陡,逐根角度、间距、两头都不齐;碰到两头时各自停在不同的地方
+  let hatch = "";
+  for (let c = xl - (y1 - y0) / 1.35; c < xr; c += 3 * (.75 + .5 * Math.abs(rnd()))) {
+    const k = 1.35 * (1 + rnd() * .07);
+    let ax = c, ay = bot(c) + rnd() * .9;
+    let bx = c + (ay - y0) / k, by = top(bx) + rnd() * .9;
+    bx = c + (ay - by) / k;
+    const L = xl + 2.5 * Math.abs(rnd()), R = xr - 2.5 * Math.abs(rnd());
+    if (ax < L) { ay -= (L - ax) * k; ax = L; }
+    if (bx > R) { by += (bx - R) * k; bx = R; }
+    if (ay - by < 2) continue;
+    const bend = rnd() * .5;
+    hatch += `M${f(ax)},${f(ay)}Q${f((ax + bx) / 2 + bend)},${f((ay + by) / 2 + bend)} ${f(bx)},${f(by)}`;
+  }
+  // 淡色底:沿上下边取点,两头各三个点收成不齐的一头,再抹圆
   const pts = [];
-  for (let i = 0; i <= n; i++) pts.push([x0 + slant + (x1 - x0 - slant) * i / n, y0 + rnd() * .35]);
-  for (let i = n; i >= 0; i--) pts.push([x0 + (x1 - x0 - slant) * i / n, y1 + rnd() * .35]);
-  return "M" + pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join("L") + "Z";
+  for (let x = xl + 2; x < xr - 2; x += 8) pts.push([x, top(x) + .6 + rnd() * .3]);
+  const my = (y0 + y1) / 2;
+  pts.push([xr - 1 + rnd(), top(xr) + 1.5], [xr + .8 * rnd(), my + rnd() * 2], [xr - 1.5 + rnd(), bot(xr) - 1]);
+  for (let x = xr - 2; x > xl + 2; x -= 8) pts.push([x, bot(x) - .4 + rnd() * .3]);
+  pts.push([xl + 1.5 + rnd(), bot(xl) - 1], [xl + .8 * rnd(), my + rnd() * 2], [xl + 1 + rnd(), top(xl) + 1.5]);
+  const mid = (p, q) => f((p[0] + q[0]) / 2) + "," + f((p[1] + q[1]) / 2);
+  let band = "M" + mid(pts[pts.length - 1], pts[0]);
+  pts.forEach((p, i) => { band += "Q" + f(p[0]) + "," + f(p[1]) + " " + mid(p, pts[(i + 1) % pts.length]); });
+  return { band: band + "Z", hatch };
+}
+
+/* 「本人」名字底下的彩铅:同一支笔,画成 mask 挂在 --me-mark 上(颜色在 CSS 里) */
+function crayonMask(seed, text) {
+  const W = crayonWidth(text, 10, 20), H = 24, m = crayonMark(W, H, 3.5, H - 3, seededRand(seed));
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' preserveAspectRatio='none'>`
+    + `<path d='${m.band}' fill-opacity='.4'/>`
+    + `<path d='${m.hatch}' fill='none' stroke='#000' stroke-width='1.5' stroke-linecap='round' stroke-opacity='.85'/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
 // ID 右边的「已通关 · 职业 · 首通日期」徽章,点击跳首通 log
@@ -1546,10 +1591,13 @@ function inkFrame(w, h, seed, weight) {
 function inkFramePath(w, h, seed, weight) {
   const rnd = seededRand(seed), W = w + 2 * INK_PAD, H = h + 2 * INK_PAD;
   const r = Math.min(5, h / 7);
-  const rr = roundRect(INK_PAD + .7 * rnd(), INK_PAD + .7 * rnd(), W - INK_PAD + .7 * rnd(), H - INK_PAD + .7 * rnd(),
-    [0, 1, 2, 3].map(() => r * (.55 + .6 * Math.abs(rnd()))));
-  // 每条边一道很缓的弧(中段鼓出或凹进不到 1px,角上归零),整圈再叠一道极长的波:线是稳的,只是不像尺子拉的
-  const bows = [0, 1, 2, 3].map(() => 1.1 * rnd()), ph = [0, 1].map(() => rnd() * 6);
+  const jit = [0, 1, 2, 3].map(() => .7 * rnd()), rk = [0, 1, 2, 3].map(() => .55 + .6 * Math.abs(rnd()));
+  // 每条边一道很缓的弧(中段鼓出不到 1px,角上归零),整圈再叠一道极长的波:线是稳的,只是不像尺子拉的。
+  // 往里凹只留三成:手画的边很少往里凹,凹多了两头就像往外翘,角显得往外戳
+  const bows = [0, 1, 2, 3].map(() => 1.1 * rnd()).map(b => b < 0 ? b * .3 : b), ph = [0, 1].map(() => rnd() * 6);
+  // 角两边都往里凹时,角会显得往外戳,这个角就圆一点(角 i 夹在边 i-1 和边 i 之间:上 右 下 左)
+  const radii = rk.map((k, i) => r * k * (1 + .45 * Math.min(1, Math.max(0, -(bows[(i + 3) % 4] + bows[i]) / 1.6))));
+  const rr = roundRect(INK_PAD + jit[0], INK_PAD + jit[1], W - INK_PAD + jit[2], H - INK_PAD + jit[3], radii);
   const bend = s => {
     const q = ((s % rr.P) + rr.P) % rr.P;
     let b = 0;
