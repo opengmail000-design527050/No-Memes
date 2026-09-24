@@ -34,9 +34,9 @@
 <main>
   <section class="napkin">
     <div class="searchWrap">
-      <input id="q" placeholder="角色名，或 角色名@服务器" autocomplete="off" spellcheck="false">
+      <input id="q" placeholder="角色名，或 角色名@服务器" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
       <button id="go">查询</button>
-      <div id="sugg" class="sugg hidden"></div>
+      <div id="sugg" class="sugg hidden" role="listbox"></div>
     </div>
     <div class="searchHint">基于 FF Logs 的公开数据，上传了才能查到。查不到不等于没打</div>
 

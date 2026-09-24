@@ -101,6 +101,7 @@ const cache = LS.get("fpw_cache", {});
 for (const k of ["scans", "reports", "resolve", "servers", "last", "cleared"]) cache[k] ??= {};
 if (cache.v !== 5) { cache.scans = {}; cache.last = {}; cache.cleared = {}; cache.v = 5; }
 let history = LS.get("fpw_history", []);
+let seenPlayers = LS.get("fpw_seen", []);   // 结果里出现过的队友 [名字, 服务器]，给联想用：带怪符号的名字不用手打
 
 function saveCache() {
   const keys = Object.keys(cache.scans);
@@ -316,22 +317,37 @@ async function cnServers() {
 const probeCache = new Map();   // ponytail: 只存内存不落盘，跨会话复用价值低
 const PROBE_CACHE_TTL = 10 * 60 * 1000;
 
-async function probeServers(name, servers) {
-  const pc = probeCache.get(name);
-  if (pc && Date.now() - pc.ts < PROBE_CACHE_TTL) return pc.hits;
-  const alias = servers.map((s, i) =>
-    `s${i}: character(name:${JSON.stringify(name)},serverSlug:${JSON.stringify(s)},serverRegion:"CN"){ name server{ name } recentReports(limit:1){ data{ startTime } } }`
-  ).join("\n");
-  const cd = (await gql(`query{ characterData{ ${alias} }}`)).characterData || {};
-  const hits = [];
-  servers.forEach((srv, i) => {
-    const ch = cd["s" + i];
-    if (!ch) return;
-    hits.push({ name: ch.name, server: ch.server?.name || srv, lastTs: ch.recentReports?.data?.[0]?.startTime || 0 });
+// 国服角色名里常见的「装饰笔画」：都是汉字区的字，输入法很难打出来，玩家多半加在名字末尾
+const NAME_DECOR = ["丶", "丨", "丿", "灬", "乀", "亅", "乂", "彡", "ゞ", "〆"];
+const decorVariants = name => NAME_DECOR.some(d => name.endsWith(d)) ? [] : NAME_DECOR.map(d => name + d);
+// 宽松比较用：去掉空格、标点符号和装饰笔画，「清心·道长丶」和「清心道长」算同一个
+const looseKey = s => norm(s).replace(/[\s\p{P}\p{S}丶丨丿灬乀亅乂彡ゞ〆ゝヽヾ]/gu, "");
+
+// 多个名字 × 31 服合成一个请求（实测 12 个名字一轮 ~4.7 点，单名 ~2 点）；按名字分别缓存，没缓存的才发
+async function probeNames(names, servers) {
+  const fresh = n => { const pc = probeCache.get(n); return pc && Date.now() - pc.ts < PROBE_CACHE_TTL; };
+  const todo = names.filter(n => !fresh(n));
+  if (todo.length) {
+    const alias = todo.flatMap((n, i) => servers.map((s, j) =>
+      `s${i}_${j}: character(name:${JSON.stringify(n)},serverSlug:${JSON.stringify(s)},serverRegion:"CN"){ name server{ name } recentReports(limit:1){ data{ startTime } } }`
+    )).join("\n");
+    const cd = (await gql(`query{ characterData{ ${alias} }}`)).characterData || {};
+    todo.forEach((n, i) => {
+      const hits = [];
+      servers.forEach((srv, j) => {
+        const ch = cd[`s${i}_${j}`];
+        if (ch) hits.push({ name: ch.name, server: ch.server?.name || srv, lastTs: ch.recentReports?.data?.[0]?.startTime || 0 });
+      });
+      probeCache.set(n, { ts: Date.now(), hits });   // 查无此人也缓存，重试同名不再烧点
+    });
+  }
+  const seen = new Set();   // 改过名的老角色会被好几个名字同时命中，去重
+  return names.flatMap(n => probeCache.get(n).hits).filter(h => {
+    const k = h.name + "@" + h.server;
+    return !seen.has(k) && seen.add(k);
   });
-  probeCache.set(name, { ts: Date.now(), hits });   // 查无此人也缓存，重试同名不再烧点
-  return hits;
 }
+const probeServers = (name, servers) => probeNames([name], servers);
 
 // maxCands：建议列表打一半时名字多半不完整，异体字候选全试必然全落空白烧点，只试原始拼写
 async function searchCharacter(name, maxCands = 4) {
@@ -342,19 +358,31 @@ async function searchCharacter(name, maxCands = 4) {
   for (const cand of cands.slice(0, maxCands)) {
     try { hits = await probeServers(cand, servers); } catch (e) { lastErr = e; continue; }
     anyOk = true;
-    if (hits.length) break;
+    if (hits.some(h => h.lastTs > 0)) break;
   }
   if (!anyOk && lastErr) throw lastErr;
-  const active = hits.filter(h => h.lastTs > 0);   // 没传过 log 的没进度可查
+  let active = hits.filter(h => h.lastTs > 0);   // 没传过 log 的没进度可查
+  // 原名全服都没有：再试一轮末尾带装饰笔画的（清心道长 → 清心道长丶），一个请求
+  let decor = false;
+  const dv = decorVariants(name);
+  if (!active.length && dv.length) {
+    active = (await probeNames(dv, servers)).filter(h => h.lastTs > 0);
+    decor = active.length > 0;
+  }
   if (!active.length) return { hits: hits };
   // 名字精确命中优先（FF Logs 会把改过名的老角色也匹配出来），再按最近上传排
   active.sort((a, b) => (normset.has(norm(a.name)) ? 0 : 1) - (normset.has(norm(b.name)) ? 0 : 1) || b.lastTs - a.lastTs);
   const best = active[0];
-  const others = active.slice(1).filter(h => normset.has(norm(h.name))).map(h => h.server);
-  const note = others.length
-    ? tr(`已自动定位到最近活跃的 ${best.server}；${others.join("、")} 也有同名角色，查错了请用「角色名@服务器」精确指定。`,
-         `Auto-picked ${best.server} (most recently active); the same name also exists on ${others.join(", ")}. If that's wrong, use "Name@Server".`)
-    : null;
+  let note = null;
+  if (decor) {
+    const others = active.slice(1).map(h => `${h.name}@${h.server}`);
+    note = tr(`没有叫「${name}」的角色，自动找到了最近活跃的「${best.name}」。`, `No character named "${name}"; picked the most recently active "${best.name}".`)
+      + (others.length ? tr(`另外还有 ${others.join("、")}，查错了请用「角色名@服务器」指定。`, ` Also found ${others.join(", ")} — use "Name@Server" if that's wrong.`) : "");
+  } else {
+    const others = active.slice(1).filter(h => normset.has(norm(h.name))).map(h => h.server);
+    if (others.length) note = tr(`已自动定位到最近活跃的 ${best.server}；${others.join("、")} 也有同名角色，查错了请用「角色名@服务器」精确指定。`,
+      `Auto-picked ${best.server} (most recently active); the same name also exists on ${others.join(", ")}. If that's wrong, use "Name@Server".`);
+  }
   return { name: best.name, server: best.server, note, hits: active };
 }
 
@@ -712,7 +740,7 @@ function renderChips() {
       if (currentZone === z.id) return;
       currentZone = z.id;
       renderChips();
-      if (currentChar || ($("#q").value.includes("@") && $("#q").value.trim())) runQuery();
+      if (currentChar || queryText().includes("@")) runQuery();
       else writeUrl(null, null, currentZone);
     };
     box.appendChild(c);
@@ -725,7 +753,7 @@ function writeUrl(name, server, zone) {
     const p = new URLSearchParams();
     if (name && server) p.set("c", `${name}@${server}`);
     else {
-      const raw = ($("#q")?.value || "").trim();
+      const raw = queryText();
       if (raw.includes("@")) p.set("c", raw);
     }
     p.set("z", String(zone ?? currentZone));
@@ -1184,6 +1212,17 @@ function renderEmptyState() {
   box.appendChild(wrap);
 }
 
+function rememberParty(rows) {
+  const add = [];
+  for (const r of rows) for (const p of [r.pull, r.weekPull, r.weekKill]) for (const m of p?.party || [])
+    if (m.name && m.server) add.push([m.name, m.server]);
+  if (!add.length) return;
+  const k = x => x[0] + "@" + x[1];
+  const keys = new Set(add.map(k));
+  seenPlayers = [...new Map(add.map(x => [k(x), x])).values(), ...seenPlayers.filter(x => !keys.has(k(x)))].slice(0, 500);
+  try { LS.set("fpw_seen", seenPlayers); } catch {}
+}
+
 function pushHistory(name, server) {
   history = [{ name, server, ts: Date.now() },
     ...history.filter(h => !(h.name === name && h.server === server))].slice(0, 20);
@@ -1255,21 +1294,27 @@ function renderResultBox(name, server, res, note) {
 }
 
 let querySeq = 0;
-let selectQueryOnFocus = false;
+let selectOnClick = false;   // 查完后（没再改字之前）点输入框：没全选就全选，已全选就按点的位置放光标
+let inflightKey = null;   // 同一角色同一副本正在查时，连按回车/查询不再重复发请求
+const queryText = () => $("#q").value.replace(/＠/g, "@").trim();   // 中文输入法常打出全角＠
 async function runQuery() {
-  const raw = $("#q").value.trim();
+  const raw = queryText();
   if (!raw && !currentChar) return;
-  const seq = ++querySeq; // 新查询启动后，旧的在途查询作废
   hideSugg();
+  const key = (raw || `${currentChar.name}@${currentChar.server}`) + "|" + currentZone;
+  if (key === inflightKey) return;
+  inflightKey = key;
+  const seq = ++querySeq; // 新查询启动后，旧的在途查询作废
   const box = $("#result");
   box.innerHTML = "";
-  box.appendChild(el("div", "spin", tr("查询中", "Searching")));
+  const [n, s] = raw.includes("@") ? raw.split("@", 2) : [raw, ""];
+  // 只输名字要逐服探测，比正式查询慢，单独给一句提示
+  box.appendChild(el("div", "spin", raw && !s.trim() ? tr("全服查找角色中", "Finding character on all servers") : tr("查询中", "Searching")));
 
   try {
     let name, server, note = null;
     if (currentChar && !raw) ({ name, server } = currentChar);
     else {
-      const [n, s] = raw.includes("@") ? raw.split("@", 2) : [raw, ""];
       const r = await resolveCharacter(n.trim(), s.trim());
       if (seq !== querySeq) return;
       if (!r.name) {
@@ -1283,7 +1328,7 @@ async function runQuery() {
       ({ name, server } = r); note = r.note;
       currentChar = { name, server };
       pushHistory(name, server);
-      $("#q").value = `${name}@${server}`;
+      if (queryText() === raw) $("#q").value = `${name}@${server}`;   // 等结果时又改了输入框就别覆盖
     }
 
     box.innerHTML = "";
@@ -1301,6 +1346,7 @@ async function runQuery() {
     if (seq !== querySeq) return;
     writeUrl(name, server, currentZone);
     renderResultBox(name, server, res, note);
+    rememberParty(res.rows || []);
     updatePoints();
   } catch (e) {
     if (seq !== querySeq) return; // 已被新查询取代，别用旧错误盖掉新结果
@@ -1314,71 +1360,143 @@ async function runQuery() {
     }
   } finally {
     saveCache();
-    if (seq === querySeq) selectQueryOnFocus = true;
+    if (seq === querySeq) { selectOnClick = true; inflightKey = null; }
   }
 }
 
-/* ---- 搜索建议：本地历史即时；远程全服探测极省点 ----
- * 远程 31 服别名很贵 → 仅当：本地无命中、≥3 字、已登录、停顿 1.2s 才探一次；
- * probeCache 10 分钟复用；有本地历史时完全不打远程（回车仍可全服正式查）。 */
-const SUGGEST_DEBOUNCE_MS = 1200;
-const SUGGEST_MIN_LEN = 3;
+/* ---- 搜索建议：本地（历史 + 见过的队友）即时；远程全服探测停顿一下就发 ----
+ * 远程一轮 = 原名 + 末尾带装饰笔画的 10 种写法 × 31 服，合成一个请求（~4.5 点）；
+ * ≥2 字、已登录、停顿 350ms 才探；本地已有一字不差的同名就不探；probeCache 10 分钟复用。 */
+const SUGGEST_DEBOUNCE_MS = 350;
+const SUGGEST_MIN_LEN = 2;
+const SUGGEST_MAX = 10;
 let probeTimer = null, probeSeq = 0;
+let suggItems = [], suggAct = -1;   // 当前列表 + 键盘高亮的那一项（-1 = 没选，回车按输入框原文查）
 function hideSugg() {
   clearTimeout(probeTimer);
   probeSeq++;
   $("#sugg").classList.add("hidden");
+  $("#q").setAttribute("aria-expanded", "false");
+  setSuggAct(-1);
 }
 
-function renderSugg(items) {
+function setSuggAct(i) {
+  suggAct = i;
+  $("#sugg").querySelectorAll(".item").forEach((d, j) => d.classList.toggle("act", j === i));
+  if (i >= 0) $("#q").setAttribute("aria-activedescendant", "sugg" + i);
+  else $("#q").removeAttribute("aria-activedescendant");
+}
+
+// ↑↓ 在可选项之间循环（跳过灰色提示行）
+function moveSugg(dir) {
+  const idx = suggItems.map((it, i) => it.dim ? -1 : i).filter(i => i >= 0);
+  if (!idx.length) return;
+  const at = idx.indexOf(suggAct);
+  setSuggAct(idx[at < 0 ? (dir > 0 ? 0 : idx.length - 1) : (at + dir + idx.length) % idx.length]);
+}
+
+function pickSugg(it) {
+  $("#q").value = `${it.name}@${it.server}`;
+  // 全服探测刚确认过的角色：直接记进解析缓存，回车查询不用再解析一轮
+  if (it.known) cache.resolve[[norm(it.name), norm(it.server), "CN"].join("|")] = { ts: Date.now(), v: [it.name, it.server] };
+  currentChar = null;
+  runQuery();
+}
+
+function renderSugg(items, autoPick) {
   const box = $("#sugg");
   box.innerHTML = "";
-  if (!items.length) { box.classList.add("hidden"); return; }
-  items.forEach(it => {
+  suggItems = items;
+  setSuggAct(-1);
+  if (!items.length) { box.classList.add("hidden"); $("#q").setAttribute("aria-expanded", "false"); return; }   // 不走 hideSugg：别掐掉刚排上的远程探测
+  items.forEach((it, i) => {
     const d = el("div", "item" + (it.dim ? " dim" : ""));
     if (it.dim) d.textContent = it.text;
     else {
+      d.id = "sugg" + i;
+      d.setAttribute("role", "option");
       d.appendChild(el("span", "n", it.name));
       d.appendChild(el("span", "s", "CN - " + it.server + (it.when ? ` · ${it.when}` : "")));
       d.onmousedown = e => {   // mousedown 抢在 blur 前
         e.preventDefault();
-        $("#q").value = `${it.name}@${it.server}`;
-        currentChar = null;
-        runQuery();
+        pickSugg(it);
       };
+      d.onmouseenter = () => setSuggAct(i);
     }
     box.appendChild(d);
   });
+  box.onmouseleave = () => setSuggAct(-1);   // 鼠标移开就不留高亮，免得回车误选
   box.classList.remove("hidden");
+  $("#q").setAttribute("aria-expanded", "true");
+  if (autoPick) moveSugg(1);
+}
+
+// 空输入框：列出最近查过的角色（结果区已经摆着「最近查询」时不重复弹，除非按 ↓ 主动要）
+function showRecent(force) {
+  if (queryText() || !history.length || (!force && $("#result .emptyHistory"))) { renderSugg([]); return; }
+  renderSugg(history.slice(0, 6).map(h => ({ name: h.name, server: h.server })));
+}
+
+// 「角色名@」之后补全服务器名：服务器列表本地缓存 30 天，补全不花点数；这个名字查过的服务器排前面
+let serversLoading = false;
+function serverSugg(name, part) {
+  const list = cache.servers.CN?.v;
+  if (!list) {
+    if (hasAuth() && !serversLoading) {   // 还没缓存过：拉一次（全服查找本来也要用它），到了再补
+      serversLoading = true;
+      cnServers().then(() => { saveCache(); if (document.activeElement === $("#q")) onInput(); })
+        .catch(() => {}).finally(() => { serversLoading = false; });
+    }
+    return [];
+  }
+  const np = norm(part);
+  if (!name || list.some(s => norm(s) === np)) return [];   // 已经写全了，回车直接查
+  const mine = new Set(history.filter(h => norm(h.name) === norm(name)).map(h => h.server));
+  return list.filter(s => norm(s).includes(np))
+    .sort((a, b) => mine.has(b) - mine.has(a) || norm(b).startsWith(np) - norm(a).startsWith(np))
+    .slice(0, 8)
+    .map(s => ({ name, server: s }));
 }
 
 function onInput() {
-  selectQueryOnFocus = false;
-  const v = $("#q").value.trim();
+  selectOnClick = false;
+  const v = queryText();
   currentChar = null;
   clearTimeout(probeTimer);
   probeSeq++;
-  if (!v || v.includes("@")) { renderSugg([]); return; }
-  const nv = norm(v);
-  const local = history.filter(h => norm(h.name).startsWith(nv))
-    .map(h => ({ name: h.name, server: h.server }));
+  if (!v) { showRecent(); return; }
+  if (v.includes("@")) {
+    const [n, s] = v.split("@", 2);
+    renderSugg(serverSugg(n.trim(), s.trim()), true);   // 默认高亮第一个，回车就补全并查询
+    return;
+  }
+  // 本地：历史在前、见过的队友在后；比较时忽略空格/符号/装饰笔画，开头就对上的排前面
+  const lv = looseKey(v) || norm(v);
+  const pool = [...history.map(h => [h.name, h.server]), ...seenPlayers];
+  const dup = new Set();
+  const local = pool.map(([name, server], i) => ({ name, server, i, k: looseKey(name) || norm(name) }))
+    .filter(x => x.k.includes(lv) && !dup.has(x.name + "@" + x.server) && dup.add(x.name + "@" + x.server))
+    .sort((a, b) => b.k.startsWith(lv) - a.k.startsWith(lv) || a.i - b.i)
+    .slice(0, 6)
+    .map(({ name, server }) => ({ name, server }));
   renderSugg(local);
-  // 有本地历史 → 不烧远程点；字太少 / 未登录也不探
-  if (local.length || v.length < SUGGEST_MIN_LEN || !hasAuth()) return;
+  // 本地已有一字不差的同名 → 不烧远程点；字太少 / 未登录也不探
+  if (local.some(l => norm(l.name) === norm(v)) || [...v].length < SUGGEST_MIN_LEN || !hasAuth()) return;
   const seq = probeSeq;
   probeTimer = setTimeout(async () => {
-    const cached = probeCache.get(v);
-    const cacheFresh = cached && Date.now() - cached.ts < PROBE_CACHE_TTL;
-    if (!cacheFresh) renderSugg([...local, { dim: true, text: tr("全服搜索中…", "Searching all servers… (costs points; Enter searches directly)") }]);
+    const names = [v, ...decorVariants(v)];
+    const cached = names.every(n => { const pc = probeCache.get(n); return pc && Date.now() - pc.ts < PROBE_CACHE_TTL; });
+    if (!cached) renderSugg([...local, { dim: true, text: tr("全服搜索中…", "Searching all servers…") }]);
     try {
-      const r = await searchCharacter(v, 1);
+      const hits = await probeNames(names, await cnServers());
       if (seq !== probeSeq) return;
-      const remote = (r.hits || []).filter(h => h.lastTs > 0)
-        .map(h => ({ name: h.name, server: h.server, when: h.lastTs ? fmtCST(h.lastTs).slice(0, 5) : "" }))
+      const remote = hits.filter(h => h.lastTs > 0)
+        .sort((a, b) => (norm(b.name) === norm(v)) - (norm(a.name) === norm(v)) || b.lastTs - a.lastTs)   // 一字不差的在前，再按最近上传
+        .map(h => ({ name: h.name, server: h.server, when: fmtCST(h.lastTs).slice(0, 5), known: true }))
         .filter(h => !local.some(l => l.name === h.name && l.server === h.server));
       if (!remote.length && !local.length)
-        renderSugg([{ dim: true, text: tr("暂无上传过 log 的同名角色", "No character with uploaded logs by that name · press Enter to retry") }]);
-      else renderSugg([...local, ...remote]);
+        renderSugg([{ dim: true, text: tr("暂无上传过 log 的同名角色", "No character with uploaded logs by that name") }]);
+      else renderSugg([...local, ...remote].slice(0, SUGGEST_MAX));
       saveCache();
     } catch (e) {
       if (seq !== probeSeq) return;
@@ -1390,11 +1508,13 @@ function onInput() {
   }, SUGGEST_DEBOUNCE_MS);
 }
 
-function selectQueryTextSoon() {
+let qWasAll = false;
+function toggleSelectAll() {
   const q = $("#q");
-  if (!selectQueryOnFocus || !q.value) return;
-  selectQueryOnFocus = false;        // 查完后只全选这一次,之后点击恢复正常编辑(光标落在点击处)
-  requestAnimationFrame(() => q.select());
+  if (!selectOnClick || !q.value) return;
+  if (qWasAll) return;                                  // 已全选：让浏览器按点的位置放光标（取消全选）
+  if (q.selectionStart !== q.selectionEnd) return;      // 刚拖选了一段：别打断
+  q.select();
 }
 
 /* ---- 设置 / 登录 UI ---- */
@@ -1496,10 +1616,32 @@ $("#langToggle").onclick = () => {
 $("#settingsBtn").onclick = openSettings;
 $("#go").onclick = () => { currentChar = null; runQuery(); };
 $("#q").addEventListener("input", onInput);
-$("#q").addEventListener("focus", selectQueryTextSoon);
-$("#q").addEventListener("click", selectQueryTextSoon);
-$("#q").addEventListener("keydown", e => { if (e.isComposing) return; if (e.key === "Enter") { e.preventDefault(); currentChar = null; runQuery(); } });
-$("#q").addEventListener("blur", () => setTimeout(hideSugg, 150));
+$("#q").addEventListener("focus", () => { if (!queryText()) showRecent(); });
+$("#q").addEventListener("mousedown", () => {
+  const q = $("#q");
+  qWasAll = document.activeElement === q && !!q.value && q.selectionStart === 0 && q.selectionEnd === q.value.length;
+});
+$("#q").addEventListener("click", toggleSelectAll);
+$("#q").addEventListener("keydown", e => {
+  if (e.isComposing || e.keyCode === 229) return;   // 229：Safari 输入法上屏那一下的回车
+  const open = !$("#sugg").classList.contains("hidden");
+  if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    e.preventDefault();
+    moveSugg(e.key === "ArrowDown" ? 1 : -1);
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    queryText() ? onInput() : showRecent(true);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const it = open && suggItems[suggAct];
+    if (it && !it.dim) pickSugg(it);
+    else { currentChar = null; runQuery(); }
+  } else if (e.key === "Escape" && open) {
+    e.preventDefault();
+    hideSugg();
+  }
+});
+$("#q").addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== $("#q")) hideSugg(); }, 150));   // 150ms 内又点回来就别收
 renderChips();
 (async () => {
   await handleOAuthCallback();   // 授权回跳先落地，再决定弹不弹引导
